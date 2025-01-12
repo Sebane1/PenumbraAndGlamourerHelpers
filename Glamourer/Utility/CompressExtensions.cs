@@ -1,10 +1,10 @@
-﻿using System;
+using Penumbra.String.Functions;
+using System;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
-using Penumbra.String.Functions;
 
-namespace RoleplayingVoiceDalamud.IPC.ThirdParty.Glamourer.Utility
+namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer.Utility
 {
 
     public static class CompressExtensions

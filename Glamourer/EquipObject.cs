@@ -1,5 +1,5 @@
 ﻿using Glamourer.Api.Enums;
-using RoleplayingVoiceDalamud.IPC.ThirdParty.Glamourer;
+using PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer;
 public class Identifier {
     public ulong Id { get; set; }
     public bool IsItem { get; set; }

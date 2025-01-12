@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace RoleplayingVoiceDalamud.IPC.ThirdParty.Glamourer
+namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
 {
     public enum FullEquipType : byte
     {
