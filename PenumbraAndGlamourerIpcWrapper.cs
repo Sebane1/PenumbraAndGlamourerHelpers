@@ -1,4 +1,4 @@
-﻿using Dalamud.Plugin;
+using Dalamud.Plugin;
 using Penumbra.Api.IpcSubscribers;
 using Glamourer.Api.IpcSubscribers;
 
@@ -18,7 +18,6 @@ public class PenumbraAndGlamourerIpcWrapper {
     public GetAvailableModSettings GetAvailableModSettings { get => _getAvailableModSettings; set => _getAvailableModSettings = value; }
     public TrySetMod TrySetMod { get => _trySetMod; set => _trySetMod = value; }
     public TrySetModPriority TrySetModPriority { get => _trySetModPriority; set => _trySetModPriority = value; }
-    public TrySetModPriority TrySetModPriority1 { get => _trySetModPriority; set => _trySetModPriority = value; }
     public TrySetModSetting TrySetModSetting { get => _trySetModSetting; set => _trySetModSetting = value; }
     public TrySetModSettings TrySetModSettings { get => _trySetModSettings; set => _trySetModSettings = value; }
     public GetDesignList GetDesignList { get => _getDesignList; set => _getDesignList = value; }
@@ -29,6 +28,7 @@ public class PenumbraAndGlamourerIpcWrapper {
     public GetModDirectory GetModDirectory { get => _getModDirectory; set => _getModDirectory = value; }
     public RedrawObject RedrawObject { get => _redrawObject; set => _redrawObject = value; }
     public GetChangedItems GetChangedItemsForMod { get => _getChangedItemsForMod; set => _getChangedItemsForMod = value; }
+    public ApplyState ApplyState { get => _applyState; set => _applyState = value; }
 
     private GetCollection _getCollection;
     private SetCollection _setCollection;
@@ -50,6 +50,7 @@ public class PenumbraAndGlamourerIpcWrapper {
     private ApplyDesign _applyDesign;
     private SetItem _setItem;
     private GetStateBase64 _getStateBase64;
+    private ApplyState _applyState;
 
     public PenumbraAndGlamourerIpcWrapper(IDalamudPluginInterface dalamudPluginInterface) {
         Instance = this;
@@ -75,5 +76,6 @@ public class PenumbraAndGlamourerIpcWrapper {
         _applyDesign = new ApplyDesign(dalamudPluginInterface);
         _setItem = new SetItem(dalamudPluginInterface);
         _getStateBase64 = new GetStateBase64(dalamudPluginInterface);
+        _applyState = new ApplyState(dalamudPluginInterface);
     }
 }

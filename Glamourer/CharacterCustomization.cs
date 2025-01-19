@@ -1,4 +1,6 @@
-﻿using System;
+using Newtonsoft.Json;
+using PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer.Utility;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -350,12 +352,25 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
 
     public class CharacterCustomization
     {
+        private static byte version;
+
         public CharacterCustomization()
         {
             Equipment = new Equipment();
             Customize = new Customize();
         }
+        public static CharacterCustomization ReadCustomization(string base64)
+        {
+            var bytes = System.Convert.FromBase64String(base64);
+            version = bytes[0];
+            version = bytes.DecompressToString(out var decompressed);
+            return JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
+        }
 
+        public string ToBase64()
+        {
+            return System.Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(this)).Compress(version));
+        }
         public int FileVersion { get; set; }
         public Equipment Equipment { get; set; }
         public Customize Customize { get; set; }
@@ -412,6 +427,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public bool ApplyStain { get; set; }
         public bool ApplyCrest { get; set; }
     }
+
 
 
 }

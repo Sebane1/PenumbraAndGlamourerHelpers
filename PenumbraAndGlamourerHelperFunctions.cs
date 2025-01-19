@@ -5,7 +5,6 @@ using Dalamud.Plugin.Services;
 using Glamourer.Api.Enums;
 using Newtonsoft.Json;
 using Penumbra.Api.Enums;
-using RoleplayingVoice;
 using PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer;
 using PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer.Utility;
 using System;
@@ -39,6 +38,13 @@ namespace PenumbraAndGlamourerHelpers
         {
             bool changed = false;
             var result = PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, FullEquipTypeToApiEquipSlot(equipItem.Type), equipItem.ItemId.Id, new List<byte>());
+            changed = true;
+            return changed;
+        }
+        public static bool SetEquipmentRaw(FullEquipType equipItem, ulong itemId, int objectIndex)
+        {
+            bool changed = false;
+            var result = PenumbraAndGlamourerIpcWrapper.Instance.SetItem.Invoke(objectIndex, FullEquipTypeToApiEquipSlot(equipItem), itemId, new List<byte>());
             changed = true;
             return changed;
         }
@@ -117,13 +123,7 @@ namespace PenumbraAndGlamourerHelpers
         {
             try
             {
-                CharacterCustomization characterCustomization = null;
-                string customizationValue = (PenumbraAndGlamourerIpcWrapper.Instance.GetStateBase64.Invoke(playerCharacter.ObjectIndex)).Item2;
-                var bytes = System.Convert.FromBase64String(customizationValue);
-                var version = bytes[0];
-                version = bytes.DecompressToString(out var decompressed);
-                characterCustomization = JsonConvert.DeserializeObject<CharacterCustomization>(decompressed);
-                return characterCustomization;
+                return CharacterCustomization.ReadCustomization(PenumbraAndGlamourerIpcWrapper.Instance.GetStateBase64.Invoke(playerCharacter.ObjectIndex).Item2);
             }
             catch
             {
@@ -143,6 +143,11 @@ namespace PenumbraAndGlamourerHelpers
                     }
                 };
             }
+        }
+
+        public static void SetCustomization(ICharacter character, CharacterCustomization characterCustomization)
+        {
+            PenumbraAndGlamourerIpcWrapper.Instance.ApplyState.Invoke(characterCustomization.ToBase64(), character.ObjectIndex, 0, ApplyFlag.Customization);
         }
         public static Dictionary<Guid, string> GetGlamourerDesigns()
         {
