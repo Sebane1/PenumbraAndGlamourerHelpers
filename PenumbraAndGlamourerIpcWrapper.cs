@@ -2,7 +2,8 @@ using Dalamud.Plugin;
 using Penumbra.Api.IpcSubscribers;
 using Glamourer.Api.IpcSubscribers;
 
-public class PenumbraAndGlamourerIpcWrapper {
+public class PenumbraAndGlamourerIpcWrapper
+{
     public static PenumbraAndGlamourerIpcWrapper Instance { get; private set; }
 
     private GetModDirectory _getModDirectory;
@@ -29,6 +30,7 @@ public class PenumbraAndGlamourerIpcWrapper {
     public RedrawObject RedrawObject { get => _redrawObject; set => _redrawObject = value; }
     public GetChangedItems GetChangedItemsForMod { get => _getChangedItemsForMod; set => _getChangedItemsForMod = value; }
     public ApplyState ApplyState { get => _applyState; set => _applyState = value; }
+    public AssignTemporaryCollection AssignTemporaryCollection { get => _assignTemporaryCollection; set => _assignTemporaryCollection = value; }
 
     private GetCollection _getCollection;
     private SetCollection _setCollection;
@@ -51,8 +53,10 @@ public class PenumbraAndGlamourerIpcWrapper {
     private SetItem _setItem;
     private GetStateBase64 _getStateBase64;
     private ApplyState _applyState;
+    private AssignTemporaryCollection _assignTemporaryCollection;
 
-    public PenumbraAndGlamourerIpcWrapper(IDalamudPluginInterface dalamudPluginInterface) {
+    public PenumbraAndGlamourerIpcWrapper(IDalamudPluginInterface dalamudPluginInterface)
+    {
         Instance = this;
         _getModDirectory = new GetModDirectory(dalamudPluginInterface);
         _getCollection = new GetCollection(dalamudPluginInterface);
@@ -77,5 +81,6 @@ public class PenumbraAndGlamourerIpcWrapper {
         _setItem = new SetItem(dalamudPluginInterface);
         _getStateBase64 = new GetStateBase64(dalamudPluginInterface);
         _applyState = new ApplyState(dalamudPluginInterface);
+        _assignTemporaryCollection = new AssignTemporaryCollection(dalamudPluginInterface);
     }
 }
