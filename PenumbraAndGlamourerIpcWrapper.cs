@@ -31,6 +31,7 @@ public class PenumbraAndGlamourerIpcWrapper
     public GetChangedItems GetChangedItemsForMod { get => _getChangedItemsForMod; set => _getChangedItemsForMod = value; }
     public ApplyState ApplyState { get => _applyState; set => _applyState = value; }
     public AssignTemporaryCollection AssignTemporaryCollection { get => _assignTemporaryCollection; set => _assignTemporaryCollection = value; }
+    public RevertState RevertState { get => _revertState; set => _revertState = value; }
 
     private GetCollection _getCollection;
     private SetCollection _setCollection;
@@ -54,6 +55,7 @@ public class PenumbraAndGlamourerIpcWrapper
     private GetStateBase64 _getStateBase64;
     private ApplyState _applyState;
     private AssignTemporaryCollection _assignTemporaryCollection;
+    private RevertState _revertState;
 
     public PenumbraAndGlamourerIpcWrapper(IDalamudPluginInterface dalamudPluginInterface)
     {
@@ -82,5 +84,6 @@ public class PenumbraAndGlamourerIpcWrapper
         _getStateBase64 = new GetStateBase64(dalamudPluginInterface);
         _applyState = new ApplyState(dalamudPluginInterface);
         _assignTemporaryCollection = new AssignTemporaryCollection(dalamudPluginInterface);
+        _revertState = new RevertState(dalamudPluginInterface);
     }
 }
