@@ -354,5 +354,115 @@ namespace PenumbraAndGlamourerHelpers
             }
             SetBodyDependancies(collection, modelDepandacies);
         }
+
+        public static int DetectBaseBodyFromPenumbra(Guid collectionId, out string detectedModName)
+        {
+            detectedModName = "";
+            try
+            {
+                var mods = PenumbraAndGlamourerIpcWrapper.Instance.GetModList.Invoke();
+                string modDirectoryPath = PenumbraAndGlamourerIpcWrapper.Instance.GetModDirectory.Invoke();
+
+                List<(string Name, string Dir, int Priority)> activeMods = new List<(string Name, string Dir, int Priority)>();
+
+                foreach (var mod in mods)
+                {
+                    // Exclude own mod (Drag and Drop / Loose Texture Compiler)
+                    if (mod.Value.Contains("Drag And Drop") || mod.Key.Contains("Drag And Drop") || 
+                        mod.Value.Contains(" Texture ") || mod.Value.Contains("LooseTextureCompilerDLC")) continue;
+
+                    var settings = PenumbraAndGlamourerIpcWrapper.Instance.GetCurrentModSettings.Invoke(collectionId, mod.Key, mod.Value, true);
+                    if (settings.Item1 == Penumbra.Api.Enums.PenumbraApiEc.Success && settings.Item2.HasValue)
+                    {
+                        if (settings.Item2.Value.Item1 == true && settings.Item2.Value.Item2 < 100)
+                        {
+                            activeMods.Add((mod.Value, mod.Key, settings.Item2.Value.Item2));
+                        }
+                    }
+                }
+
+                // Sort by priority descending
+                activeMods.Sort((a, b) => b.Priority.CompareTo(a.Priority));
+
+                foreach (var mod in activeMods)
+                {
+                    bool foundBodyTextures = false;
+
+                    // Check default_mod.json
+                    string defaultJsonPath = System.IO.Path.Combine(modDirectoryPath, mod.Dir, "default_mod.json");
+                    if (System.IO.File.Exists(defaultJsonPath))
+                    {
+                        string json = System.IO.File.ReadAllText(defaultJsonPath);
+                        if (json.Contains("b0001"))
+                        {
+                            foundBodyTextures = true;
+                            if (CheckIfJsonIsBodyType(mod.Name, mod.Dir, json, out int type))
+                            {
+                                detectedModName = mod.Name;
+                                Log?.Information($"[Drag And Drop Texturing] Penumbra base body detected as {type} via '{mod.Name}' in default_mod.json");
+                                return type;
+                            }
+                        }
+                    }
+                    
+                    // Check group_*.json files
+                    if (System.IO.Directory.Exists(System.IO.Path.Combine(modDirectoryPath, mod.Dir)))
+                    {
+                        var files = System.IO.Directory.GetFiles(System.IO.Path.Combine(modDirectoryPath, mod.Dir), "group_*.json");
+                        foreach (var file in files)
+                        {
+                            string json = System.IO.File.ReadAllText(file);
+                            if (json.Contains("b0001"))
+                            {
+                                foundBodyTextures = true;
+                                if (CheckIfJsonIsBodyType(mod.Name, mod.Dir, json, out int type))
+                                {
+                                    detectedModName = mod.Name;
+                                    Log?.Information($"[Drag And Drop Texturing] Penumbra base body detected as {type} via '{mod.Name}' in {System.IO.Path.GetFileName(file)}");
+                                    return type;
+                                }
+                            }
+                        }
+                    }
+
+                    // If it modifies bodies but we couldn't figure out which one, we keep searching lower priorities
+                    if (foundBodyTextures)
+                    {
+                        Log?.Information($"[Drag And Drop Texturing] Penumbra mod '{mod.Name}' modifies body, but type (Bibo/Gen3) could not be determined.");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log?.Warning(ex, "Failed to detect base body from Penumbra");
+            }
+            Log?.Information($"[Drag And Drop Texturing] Penumbra base body detection returned unknown (-1).");
+            return -1; // Unknown
+        }
+
+        private static bool CheckIfJsonIsBodyType(string name, string dir, string json, out int type)
+        {
+            type = 2;
+            string lowerName = name.ToLower();
+            string lowerDir = dir.ToLower();
+            string lowerJson = json.ToLower();
+
+            if (lowerName.Contains("bibo") || lowerName.Contains("b+") || lowerDir.Contains("bibo") || lowerJson.Contains("bibo"))
+            {
+                type = 1; // Bibo
+                return true;
+            }
+            if (lowerName.Contains("gen3") || lowerName.Contains("eve") || lowerDir.Contains("gen3") || lowerJson.Contains("gen3"))
+            {
+                type = 2; // Gen3
+                return true;
+            }
+            if (lowerName.Contains("tbse") || lowerDir.Contains("tbse") || lowerJson.Contains("tbse"))
+            {
+                type = 3; // TBSE
+                return true;
+            }
+            return false;
+        }
     }
 }
