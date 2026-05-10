@@ -367,9 +367,23 @@ namespace PenumbraAndGlamourerHelpers
 
                 foreach (var mod in mods)
                 {
-                    // Exclude own mod (Drag and Drop / Loose Texture Compiler)
-                    if (mod.Value.Contains("Drag And Drop") || mod.Key.Contains("Drag And Drop") || 
-                        mod.Value.Contains(" Texture ") || mod.Value.Contains("LooseTextureCompilerDLC")) continue;
+                    string lowerKey = mod.Key.ToLower();
+                    string lowerValue = mod.Value.ToLower();
+                    bool isOwnMod = lowerValue.Contains("drag and drop") || lowerKey.Contains("drag and drop") || lowerValue.Contains("loosetexturecompilerdlc") || lowerKey.Contains("loosetexturecompilerdlc");
+                    
+                    if (!isOwnMod)
+                    {
+                        string[] categories = { "body", "face", "eyes", "eyebrows" };
+                        foreach (var cat in categories)
+                        {
+                            if (lowerValue.EndsWith("texture " + cat) || lowerKey.EndsWith("texture" + cat) || lowerKey.EndsWith("texture " + cat))
+                            {
+                                isOwnMod = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (isOwnMod) continue;
 
                     var settings = PenumbraAndGlamourerIpcWrapper.Instance.GetCurrentModSettings.Invoke(collectionId, mod.Key, mod.Value, true);
                     if (settings.Item1 == Penumbra.Api.Enums.PenumbraApiEc.Success && settings.Item2.HasValue)
@@ -393,7 +407,7 @@ namespace PenumbraAndGlamourerHelpers
                     if (System.IO.File.Exists(defaultJsonPath))
                     {
                         string json = System.IO.File.ReadAllText(defaultJsonPath);
-                        if (json.Contains("b0001"))
+                        if (System.Text.RegularExpressions.Regex.IsMatch(json, @"(?:b0001|bibo|tbse|gen3|eve|yab)", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
                         {
                             foundBodyTextures = true;
                             if (CheckIfJsonIsBodyType(mod.Name, mod.Dir, json, out int type))
@@ -412,7 +426,7 @@ namespace PenumbraAndGlamourerHelpers
                         foreach (var file in files)
                         {
                             string json = System.IO.File.ReadAllText(file);
-                            if (json.Contains("b0001"))
+                            if (System.Text.RegularExpressions.Regex.IsMatch(json, @"(?:b0001|bibo|tbse|gen3|eve|yab)", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
                             {
                                 foundBodyTextures = true;
                                 if (CheckIfJsonIsBodyType(mod.Name, mod.Dir, json, out int type))
@@ -447,22 +461,273 @@ namespace PenumbraAndGlamourerHelpers
             string lowerDir = dir.ToLower();
             string lowerJson = json.ToLower();
 
-            if (lowerName.Contains("bibo") || lowerName.Contains("b+") || lowerDir.Contains("bibo") || lowerJson.Contains("bibo"))
+            if (lowerName.Contains("gen3") || lowerName.Contains("eve") || lowerDir.Contains("gen3"))
             {
-                type = 1; // Bibo
-                return true;
+                type = 2; return true;
             }
-            if (lowerName.Contains("gen3") || lowerName.Contains("eve") || lowerDir.Contains("gen3") || lowerJson.Contains("gen3"))
+            if (lowerName.Contains("tbse") || lowerDir.Contains("tbse"))
             {
-                type = 2; // Gen3
-                return true;
+                type = 3; return true;
             }
-            if (lowerName.Contains("tbse") || lowerDir.Contains("tbse") || lowerJson.Contains("tbse"))
+            if (lowerName.Contains("yab") || lowerDir.Contains("yab"))
             {
-                type = 3; // TBSE
-                return true;
+                type = 1; return true;
             }
+            if (lowerName.Contains("bibo") || lowerName.Contains("b+") || lowerDir.Contains("bibo"))
+            {
+                type = 1; return true;
+            }
+
+            if (lowerJson.Contains("gen3") || lowerJson.Contains("eve"))
+            {
+                type = 2; return true;
+            }
+            if (lowerJson.Contains("tbse"))
+            {
+                type = 3; return true;
+            }
+            if (lowerJson.Contains("yab") || lowerJson.Contains("bibo"))
+            {
+                type = 1; return true;
+            }
+
             return false;
+        }
+
+        public static void ExtractActiveTextureFromPenumbra(Guid collectionId, string category, string raceCode, string subRaceName, out string extractedModName, out string extractedBase, out string extractedNormal, out string extractedMask, FFXIVLooseTextureCompiler.PathOrganization.TextureSet item = null)
+        {
+            extractedModName = "";
+            extractedBase = "";
+            extractedNormal = "";
+            extractedMask = "";
+            try
+            {
+                var mods = PenumbraAndGlamourerIpcWrapper.Instance.GetModList.Invoke();
+                string modDirectoryPath = PenumbraAndGlamourerIpcWrapper.Instance.GetModDirectory.Invoke();
+
+                List<(string Name, string Dir, int Priority, System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<string>> Settings)> activeMods = new List<(string Name, string Dir, int Priority, System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<string>> Settings)>();
+
+                foreach (var mod in mods)
+                {
+                    string lowerKey = mod.Key.ToLower();
+                    string lowerValue = mod.Value.ToLower();
+                    bool isOwnMod = lowerValue.Contains("drag and drop") || lowerKey.Contains("drag and drop") || lowerValue.Contains("loosetexturecompilerdlc") || lowerKey.Contains("loosetexturecompilerdlc");
+                    
+                    if (!isOwnMod)
+                    {
+                        string[] categories = { "body", "face", "eyes", "eyebrows" };
+                        foreach (var cat in categories)
+                        {
+                            if (lowerValue.EndsWith("texture " + cat) || lowerKey.EndsWith("texture" + cat) || lowerKey.EndsWith("texture " + cat))
+                            {
+                                isOwnMod = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (isOwnMod) continue;
+
+                    var settings = PenumbraAndGlamourerIpcWrapper.Instance.GetCurrentModSettings.Invoke(collectionId, mod.Key, mod.Value, true);
+                    if (settings.Item1 == Penumbra.Api.Enums.PenumbraApiEc.Success && settings.Item2.HasValue)
+                    {
+                        if (settings.Item2.Value.Item1 == true && settings.Item2.Value.Item2 < 100)
+                        {
+                            activeMods.Add((mod.Value, mod.Key, settings.Item2.Value.Item2, settings.Item2.Value.Item3));
+                        }
+                    }
+                }
+
+                activeMods.Sort((a, b) => b.Priority.CompareTo(a.Priority));
+
+                string strictPattern = "";
+                string clanPattern = "";
+                string fallbackPattern = "";
+                if (category.EndsWith("_body") || category.Contains("fallback_Body"))
+                {
+                    strictPattern = @"chara/human/c" + raceCode + @"[^\""]*b0001[^\""]*(?:_d|_base|_b|_diffuse|_diff)\.tex";
+                    clanPattern = @"chara/[^\""]*" + subRaceName + @"[^\""]*(?:_d|_base|_b|_diffuse|_diff)\.tex";
+                    fallbackPattern = @"chara/[^\""]*(?:bibo|tbse|gen3|eve|yab|b0001|body|base)[^\""]*(?:_d|_base|_b|_diffuse|_diff)\.tex";
+                }
+                else if (category.EndsWith("_face") || category.Contains("fallback_Face"))
+                {
+                    strictPattern = @"chara/human/c" + raceCode + @"[^\""]*f\d{4}[^\""]*(?:_d|_base|_b|_fac_b)\.tex";
+                    fallbackPattern = @"chara/[^\""]*f\d{4}[^\""]*(?:_d|_base|_b|_fac_b)\.tex";
+                }
+                else if (category.EndsWith("_eyes") || category.Contains("fallback_Eyes"))
+                {
+                    return; // Eyes should not pull underlays
+                }
+                else return;
+
+                foreach (var mod in activeMods)
+                {
+                    bool isPapMod = false;
+                    string defaultJsonPath = System.IO.Path.Combine(modDirectoryPath, mod.Dir, "default_mod.json");
+                    string defaultJson = "";
+                    
+                    if (System.IO.File.Exists(defaultJsonPath))
+                    {
+                        defaultJson = System.IO.File.ReadAllText(defaultJsonPath);
+                        if (defaultJson.Contains(".pap")) isPapMod = true;
+                    }
+
+                    if (!isPapMod && System.IO.Directory.Exists(System.IO.Path.Combine(modDirectoryPath, mod.Dir)))
+                    {
+                        var groupFiles = System.IO.Directory.GetFiles(System.IO.Path.Combine(modDirectoryPath, mod.Dir), "group_*.json");
+                        foreach (var groupFile in groupFiles)
+                        {
+                            if (System.IO.File.ReadAllText(groupFile).Contains(".pap"))
+                            {
+                                isPapMod = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (isPapMod) continue;
+
+                    Dictionary<string, string> activeFiles = new Dictionary<string, string>();
+
+                    // 1. Load default files
+                    if (!string.IsNullOrEmpty(defaultJson))
+                    {
+                        try
+                        {
+                            var option = Newtonsoft.Json.JsonConvert.DeserializeObject<FFXIVVoicePackCreator.Json.Option>(defaultJson);
+                            if (option?.Files != null)
+                            {
+                                foreach (var kvp in option.Files) activeFiles[kvp.Key] = kvp.Value;
+                            }
+                        }
+                        catch { }
+                    }
+
+                    // 2. Load group overrides (these take precedence in Penumbra)
+                    if (System.IO.Directory.Exists(System.IO.Path.Combine(modDirectoryPath, mod.Dir)))
+                    {
+                        var files = System.IO.Directory.GetFiles(System.IO.Path.Combine(modDirectoryPath, mod.Dir), "group_*.json");
+                        foreach (var file in files)
+                        {
+                            try
+                            {
+                                string json = System.IO.File.ReadAllText(file);
+                                var group = Newtonsoft.Json.JsonConvert.DeserializeObject<FFXIVVoicePackCreator.Json.Group>(json);
+                                if (group != null && mod.Settings.ContainsKey(group.Name))
+                                {
+                                    var activeOptions = mod.Settings[group.Name];
+                                    foreach (var option in group.Options)
+                                    {
+                                        if (activeOptions.Contains(option.Name) && option.Files != null)
+                                        {
+                                            foreach (var kvp in option.Files) activeFiles[kvp.Key] = kvp.Value;
+                                        }
+                                    }
+                                }
+                            }
+                            catch { }
+                        }
+                    }
+
+                    // 3. Evaluate patterns in hierarchical order to ensure subrace textures aren't bypassed
+                    string foundMatch = null;
+                    
+                    // Pass 0: Exact path match if item is provided
+                    if (item != null && activeFiles.TryGetValue(item.InternalBasePath, out string exactMatch))
+                    {
+                        string fullPath = System.IO.Path.Combine(modDirectoryPath, mod.Dir, exactMatch.Replace("/", "\\"));
+                        if (System.IO.File.Exists(fullPath))
+                        {
+                            extractedModName = mod.Name;
+                            extractedBase = fullPath;
+                            
+                            if (!string.IsNullOrEmpty(item.InternalNormalPath) && activeFiles.TryGetValue(item.InternalNormalPath, out string foundNormal))
+                            {
+                                string normPath = System.IO.Path.Combine(modDirectoryPath, mod.Dir, foundNormal.Replace("/", "\\"));
+                                if (System.IO.File.Exists(normPath)) extractedNormal = normPath;
+                            }
+                            
+                            if (!string.IsNullOrEmpty(item.InternalMaskPath) && activeFiles.TryGetValue(item.InternalMaskPath, out string foundMask))
+                            {
+                                string maskPath = System.IO.Path.Combine(modDirectoryPath, mod.Dir, foundMask.Replace("/", "\\"));
+                                if (System.IO.File.Exists(maskPath)) extractedMask = maskPath;
+                            }
+                            
+                            return;
+                        }
+                    }
+                    
+                    // Pass 1: Clan Match (e.g. Raen vs Xaela for unified bodies like Pythia)
+                    if (!string.IsNullOrEmpty(clanPattern))
+                    {
+                        foreach (var kvp in activeFiles)
+                        {
+                            if (System.Text.RegularExpressions.Regex.IsMatch(kvp.Key, clanPattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                            {
+                                foundMatch = kvp.Value; break;
+                            }
+                        }
+                    }
+
+                    // Pass 2: Universal Fallback (e.g. Bibo / TBSE / Gen3)
+                    if (foundMatch == null)
+                    {
+                        foreach (var kvp in activeFiles)
+                        {
+                            if (System.Text.RegularExpressions.Regex.IsMatch(kvp.Key, fallbackPattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                            {
+                                foundMatch = kvp.Value; break;
+                            }
+                        }
+                    }
+
+                    // Pass 3: Strict Race/Gender Match (Vanilla Paths)
+                    if (foundMatch == null)
+                    {
+                        foreach (var kvp in activeFiles)
+                        {
+                            if (System.Text.RegularExpressions.Regex.IsMatch(kvp.Key, strictPattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                            {
+                                foundMatch = kvp.Value; break;
+                            }
+                        }
+                    }
+
+                    if (foundMatch != null)
+                    {
+                        string fullPath = System.IO.Path.Combine(modDirectoryPath, mod.Dir, foundMatch.Replace("/", "\\"));
+                        if (System.IO.File.Exists(fullPath))
+                        {
+                            extractedModName = mod.Name;
+                            extractedBase = fullPath;
+                            
+                            // Try to extract matching normal and mask
+                            string prefix = System.Text.RegularExpressions.Regex.Replace(foundMatch, @"(?:_d|_base|_b|_diffuse|_diff|_fac_b)\.tex$", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                            
+                            foreach (var kvp in activeFiles)
+                            {
+                                if (kvp.Value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    if (System.Text.RegularExpressions.Regex.IsMatch(kvp.Value, @"(?:_n|_norm)\.tex$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                                    {
+                                        string normPath = System.IO.Path.Combine(modDirectoryPath, mod.Dir, kvp.Value.Replace("/", "\\"));
+                                        if (System.IO.File.Exists(normPath)) extractedNormal = normPath;
+                                    }
+                                    else if (System.Text.RegularExpressions.Regex.IsMatch(kvp.Value, @"(?:_s|_mask|_m)\.tex$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                                    {
+                                        string maskPath = System.IO.Path.Combine(modDirectoryPath, mod.Dir, kvp.Value.Replace("/", "\\"));
+                                        if (System.IO.File.Exists(maskPath)) extractedMask = maskPath;
+                                    }
+                                }
+                            }
+                            return;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log?.Warning(ex, "Failed to extract active texture from Penumbra");
+            }
         }
     }
 }

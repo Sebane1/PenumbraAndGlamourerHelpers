@@ -1,3 +1,4 @@
+using System;
 using Dalamud.Plugin;
 using Penumbra.Api.IpcSubscribers;
 using Glamourer.Api.IpcSubscribers;
@@ -15,6 +16,7 @@ public class PenumbraAndGlamourerIpcWrapper
     public GetModList GetModList { get => _getModList; set => _getModList = value; }
     public AddMod AddMod { get => _addMod; set => _addMod = value; }
     public ReloadMod ReloadMod { get => _reloadMod; set => _reloadMod = value; }
+    public DeleteMod DeleteMod { get => _deleteMod; set => _deleteMod = value; }
     public GetCurrentModSettings GetCurrentModSettings { get => _getCurrentModSettings; set => _getCurrentModSettings = value; }
     public GetAvailableModSettings GetAvailableModSettings { get => _getAvailableModSettings; set => _getAvailableModSettings = value; }
     public TrySetMod TrySetMod { get => _trySetMod; set => _trySetMod = value; }
@@ -42,6 +44,9 @@ public class PenumbraAndGlamourerIpcWrapper
     private GetModList _getModList;
     private AddMod _addMod;
     private ReloadMod _reloadMod;
+    private DeleteMod _deleteMod;
+    private IDisposable _modSettingChangedEvent;
+    private IDisposable _glamourerStateChangedEvent;
     private GetCurrentModSettings _getCurrentModSettings;
     private GetAvailableModSettings _getAvailableModSettings;
     private TrySetMod _trySetMod;
@@ -70,6 +75,9 @@ public class PenumbraAndGlamourerIpcWrapper
         _getModList = new GetModList(dalamudPluginInterface);
         _addMod = new AddMod(dalamudPluginInterface);
         _reloadMod = new ReloadMod(dalamudPluginInterface);
+        _deleteMod = new DeleteMod(dalamudPluginInterface);
+        _modSettingChangedEvent = ModSettingChanged.Subscriber(dalamudPluginInterface, ModSettingChangedDelegate);
+        _glamourerStateChangedEvent = StateChanged.Subscriber(dalamudPluginInterface, GlamourerStateChangedDelegate);
         _getCurrentModSettings = new GetCurrentModSettings(dalamudPluginInterface);
         _getAvailableModSettings = new GetAvailableModSettings(dalamudPluginInterface);
         _trySetMod = new TrySetMod(dalamudPluginInterface);
@@ -86,4 +94,29 @@ public class PenumbraAndGlamourerIpcWrapper
         _assignTemporaryCollection = new AssignTemporaryCollection(dalamudPluginInterface);
         _revertState = new RevertState(dalamudPluginInterface);
     }
+
+    private void ModSettingChangedDelegate(Penumbra.Api.Enums.ModSettingChange type, Guid collectionId, string modDir, bool inherited)
+    {
+        OnModSettingChanged?.Invoke(this, new ModSettingChangedEventArgs(modDir));
+    }
+
+    private void GlamourerStateChangedDelegate(nint gameObjectPtr)
+    {
+        OnGlamourerStateChanged?.Invoke(this, new GlamourerStateChangedEventArgs(gameObjectPtr));
+    }
+
+    public event EventHandler<ModSettingChangedEventArgs> OnModSettingChanged;
+    public event EventHandler<GlamourerStateChangedEventArgs> OnGlamourerStateChanged;
+}
+
+public class GlamourerStateChangedEventArgs : EventArgs
+{
+    public nint GameObjectPtr { get; }
+    public GlamourerStateChangedEventArgs(nint ptr) { GameObjectPtr = ptr; }
+}
+
+public class ModSettingChangedEventArgs : EventArgs
+{
+    public string ModDirectory { get; }
+    public ModSettingChangedEventArgs(string modDir) { ModDirectory = modDir; }
 }
