@@ -319,17 +319,21 @@ namespace PenumbraAndGlamourerHelpers
 
             try
             {
-                plugin.Chat.Print($"[Drag And Drop Debug] Searching for {category} texture. RaceCode: {raceCode}");
+                plugin.Chat.Print($"[Drag And Drop Debug] Searching for {category} texture. RaceCode: {raceCode}, InternalBase: {item.InternalBasePath}");
 
                 var mods = PenumbraAndGlamourerIpcWrapper.Instance.GetModList.Invoke();
                 string modDirectoryPath = PenumbraAndGlamourerIpcWrapper.Instance.GetModDirectory.Invoke();
+                plugin.Chat.Print($"[Drag And Drop Debug] Total mods in list: {mods.Count}");
 
                 List<(string Name, string Dir, int Priority, Dictionary<string, List<string>> Settings)> activeMods = new List<(string Name, string Dir, int Priority, Dictionary<string, List<string>> Settings)>();
                 foreach (var mod in mods)
                 {
-                    // SKIP OUR OWN MODS to avoid detecting ourselves as the underlay
-                    // We check for "Drag And Drop" but also "do_not_edit" which is common in generated mods
-                    if (mod.Value.Contains("Drag And Drop") || mod.Key.Contains("Drag And Drop") || mod.Key.Contains("do_not_edit")) continue;
+                    // SKIP OUR OWN MODS
+                    string modNameLower = mod.Value.ToLower();
+                    string modDirLower = mod.Key.ToLower();
+                    if (modNameLower.Contains("drag and drop") || modDirLower.Contains("drag and drop") || modDirLower.Contains("do_not_edit") ||
+                        modNameLower.Contains("texture body") || modNameLower.Contains("texture face") || modNameLower.Contains("texture eyes") ||
+                        modNameLower.Contains("texture eyebrows") || modNameLower.Contains("texture mod")) continue;
 
                     var settings = PenumbraAndGlamourerIpcWrapper.Instance.GetCurrentModSettings.Invoke(collectionId, mod.Key, mod.Value, true);
                     if (settings.Item1 == PenumbraApiEc.Success && settings.Item2.HasValue && settings.Item2.Value.Item1)
@@ -338,6 +342,7 @@ namespace PenumbraAndGlamourerHelpers
                     }
                 }
                 activeMods.Sort((a, b) => b.Priority.CompareTo(a.Priority));
+                plugin.Chat.Print($"[Drag And Drop Debug] Active mods (non-self): {activeMods.Count}");
 
                 foreach (var mod in activeMods)
                 {
@@ -365,10 +370,14 @@ namespace PenumbraAndGlamourerHelpers
                             plugin.Chat.Print($"[Drag And Drop Debug] Found base: {item.InternalBasePath} in mod {mod.Name}");
                             return;
                         }
+                        else
+                        {
+                            plugin.Chat.Print($"[Drag And Drop Debug] Path matched in {mod.Name} but file not found: {fullPath}");
+                        }
                     }
                 }
 
-                plugin.Chat.Print($"[Drag And Drop Debug] No modded {category} texture found (excluding 'Drag And Drop' mods).");
+                plugin.Chat.Print($"[Drag And Drop Debug] No modded {category} texture found for path: {item.InternalBasePath}");
             }
             catch (Exception ex)
             {
