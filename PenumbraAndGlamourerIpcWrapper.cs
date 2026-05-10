@@ -30,6 +30,7 @@ public class PenumbraAndGlamourerIpcWrapper : IDisposable
     public GetChangedItemsForCollection GetChangedItemsForCollection { get => _getChangedItemsForCollection; set => _getChangedItemsForCollection = value; }
     public GetModDirectory GetModDirectory { get => _getModDirectory; set => _getModDirectory = value; }
     public RedrawObject RedrawObject { get => _redrawObject; set => _redrawObject = value; }
+    public ResolvePath ResolvePath { get => _resolvePath; set => _resolvePath = value; }
     public GetChangedItems GetChangedItemsForMod { get => _getChangedItemsForMod; set => _getChangedItemsForMod = value; }
     public ApplyState ApplyState { get => _applyState; set => _applyState = value; }
     public AssignTemporaryCollection AssignTemporaryCollection { get => _assignTemporaryCollection; set => _assignTemporaryCollection = value; }
@@ -54,6 +55,7 @@ public class PenumbraAndGlamourerIpcWrapper : IDisposable
     private TrySetModSetting _trySetModSetting;
     private TrySetModSettings _trySetModSettings;
     private RedrawObject _redrawObject;
+    private ResolvePath _resolvePath;
     private GetDesignList _getDesignList;
     private ApplyDesign _applyDesign;
     private SetItem _setItem;
@@ -86,6 +88,7 @@ public class PenumbraAndGlamourerIpcWrapper : IDisposable
         _trySetModSetting = new TrySetModSetting(dalamudPluginInterface);
         _trySetModSettings = new TrySetModSettings(dalamudPluginInterface);
         _redrawObject = new RedrawObject(dalamudPluginInterface);
+        _resolvePath = new ResolvePath(dalamudPluginInterface);
         _getDesignList = new GetDesignList(dalamudPluginInterface);
         _applyDesign = new ApplyDesign(dalamudPluginInterface);
         _setItem = new SetItem(dalamudPluginInterface);
