@@ -3,7 +3,7 @@ using Dalamud.Plugin;
 using Penumbra.Api.IpcSubscribers;
 using Glamourer.Api.IpcSubscribers;
 
-public class PenumbraAndGlamourerIpcWrapper
+public class PenumbraAndGlamourerIpcWrapper : IDisposable
 {
     public static PenumbraAndGlamourerIpcWrapper Instance { get; private set; }
 
@@ -107,6 +107,12 @@ public class PenumbraAndGlamourerIpcWrapper
 
     public event EventHandler<ModSettingChangedEventArgs> OnModSettingChanged;
     public event EventHandler<GlamourerStateChangedEventArgs> OnGlamourerStateChanged;
+
+    public void Dispose()
+    {
+        _modSettingChangedEvent?.Dispose();
+        _glamourerStateChangedEvent?.Dispose();
+    }
 }
 
 public class GlamourerStateChangedEventArgs : EventArgs
