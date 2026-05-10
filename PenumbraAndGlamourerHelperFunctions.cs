@@ -323,17 +323,17 @@ namespace PenumbraAndGlamourerHelpers
 
                 var mods = PenumbraAndGlamourerIpcWrapper.Instance.GetModList.Invoke();
                 string modDirectoryPath = PenumbraAndGlamourerIpcWrapper.Instance.GetModDirectory.Invoke();
-                plugin.Chat.Print($"[Drag And Drop Debug] Total mods in list: {mods.Count}");
+                plugin?.PluginLog?.Information($"[Drag And Drop Debug] Total mods in list: {mods.Count}");
 
                 List<(string Name, string Dir, int Priority, Dictionary<string, List<string>> Settings)> activeMods = new List<(string Name, string Dir, int Priority, Dictionary<string, List<string>> Settings)>();
                 foreach (var mod in mods)
                 {
-                    // SKIP OUR OWN MODS
+                    // SKIP OUR OWN MODS — our generated mods always end with "Texture Body/Face/Eyes/Eyebrows"
                     string modNameLower = mod.Value.ToLower();
                     string modDirLower = mod.Key.ToLower();
                     if (modNameLower.Contains("drag and drop") || modDirLower.Contains("drag and drop") || modDirLower.Contains("do_not_edit") ||
-                        modNameLower.Contains("texture body") || modNameLower.Contains("texture face") || modNameLower.Contains("texture eyes") ||
-                        modNameLower.Contains("texture eyebrows") || modNameLower.Contains("texture mod")) continue;
+                        modNameLower.EndsWith("texture body") || modNameLower.EndsWith("texture face") || modNameLower.EndsWith("texture eyes") ||
+                        modNameLower.EndsWith("texture eyebrows") || modNameLower.EndsWith("texture mod")) continue;
 
                     var settings = PenumbraAndGlamourerIpcWrapper.Instance.GetCurrentModSettings.Invoke(collectionId, mod.Key, mod.Value, true);
                     if (settings.Item1 == PenumbraApiEc.Success && settings.Item2.HasValue && settings.Item2.Value.Item1)
@@ -342,14 +342,17 @@ namespace PenumbraAndGlamourerHelpers
                     }
                 }
                 activeMods.Sort((a, b) => b.Priority.CompareTo(a.Priority));
-                plugin.Chat.Print($"[Drag And Drop Debug] Active mods (non-self): {activeMods.Count}");
+                plugin?.PluginLog?.Information($"[Drag And Drop Debug] Active mods (non-self): {activeMods.Count}");
 
                 foreach (var mod in activeMods)
                 {
                     Dictionary<string, string> files = GetFilesForMod(modDirectoryPath, mod.Dir, mod.Settings);
 
-                    // Try to find the paths from the item in this mod
-                    if (!string.IsNullOrEmpty(item.InternalBasePath) && files.TryGetValue(item.InternalBasePath, out string baseMatch))
+                    // Try to find the paths from the item in this mod (keys are lowercase in the dictionary)
+                    string baseLookup = item.InternalBasePath?.ToLowerInvariant().Replace("\\", "/") ?? "";
+                    string normLookup = item.InternalNormalPath?.ToLowerInvariant().Replace("\\", "/") ?? "";
+                    string maskLookup = item.InternalMaskPath?.ToLowerInvariant().Replace("\\", "/") ?? "";
+                    if (!string.IsNullOrEmpty(baseLookup) && files.TryGetValue(baseLookup, out string baseMatch))
                     {
                         // Skip generated files
                         if (baseMatch.Contains("do_not_edit") || baseMatch.Contains("_generated")) continue;
@@ -361,10 +364,10 @@ namespace PenumbraAndGlamourerHelpers
                             extractedModName = mod.Name;
 
                             // Get Normal and Mask from SAME mod if they exist
-                            if (!string.IsNullOrEmpty(item.InternalNormalPath) && files.TryGetValue(item.InternalNormalPath, out string normMatch))
+                            if (!string.IsNullOrEmpty(normLookup) && files.TryGetValue(normLookup, out string normMatch))
                                 extractedNormal = Path.Combine(modDirectoryPath, mod.Dir, normMatch.Replace("/", "\\"));
 
-                            if (!string.IsNullOrEmpty(item.InternalMaskPath) && files.TryGetValue(item.InternalMaskPath, out string maskMatch))
+                            if (!string.IsNullOrEmpty(maskLookup) && files.TryGetValue(maskLookup, out string maskMatch))
                                 extractedMask = Path.Combine(modDirectoryPath, mod.Dir, maskMatch.Replace("/", "\\"));
 
                             plugin.Chat.Print($"[Drag And Drop Debug] Found base: {item.InternalBasePath} in mod {mod.Name}");
@@ -391,7 +394,7 @@ namespace PenumbraAndGlamourerHelpers
 
             try
             {
-                plugin.Chat.Print("[Drag And Drop Debug] Populating Omni Overrides...");
+                plugin?.PluginLog?.Information("[Drag And Drop Debug] Populating Omni Overrides...");
                 string modDirectoryPath = PenumbraAndGlamourerIpcWrapper.Instance.GetModDirectory.Invoke();
                 var mods = PenumbraAndGlamourerIpcWrapper.Instance.GetModList.Invoke();
 
@@ -413,7 +416,7 @@ namespace PenumbraAndGlamourerHelpers
                 foreach (var mod in activeMods)
                 {
                     Dictionary<string, string> files = GetFilesForMod(modDirectoryPath, mod.Dir, mod.Settings);
-                    plugin.Chat.Print($"[Drag And Drop Debug] Checking mod {mod.Name} for compatibility textures (Effective Race: {mainRace})...");
+                    plugin?.PluginLog?.Information($"[Drag And Drop Debug] Checking mod {mod.Name} for compatibility textures (Effective Race: {mainRace})...");
 
                     // Check Bibo+ (baseBody 1)
                     BackupTexturePaths.BiboOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, 1, gender, mainRace, BackupTexturePaths.BiboOverride, plugin);
@@ -430,7 +433,7 @@ namespace PenumbraAndGlamourerHelpers
                     // Check Relala (baseBody 7)
                     BackupTexturePaths.RelalaOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, 7, gender, mainRace, BackupTexturePaths.RelalaOverride, plugin);
                 }
-                plugin.Chat.Print("[Drag And Drop Debug] Omni Overrides population check complete.");
+                plugin?.PluginLog?.Information("[Drag And Drop Debug] Omni Overrides population check complete.");
             }
             catch (Exception ex)
             {
