@@ -243,46 +243,73 @@ namespace PenumbraAndGlamourerHelpers
             return activeMods;
         }
 
-        public static int DetectBaseBodyFromPenumbra(Guid collectionId, out string detectedModName)
+        public static int DetectBaseBodyFromPenumbra(Guid collectionId, out string detectedModName, DragAndDropTexturing.Plugin plugin = null)
         {
             detectedModName = "";
             try
             {
                 var activeMods = GetActiveMods(collectionId);
                 string modDirectoryPath = PenumbraAndGlamourerIpcWrapper.Instance.GetModDirectory.Invoke();
+                plugin?.Chat?.Print($"[Drag And Drop Debug] DetectBaseBody: {activeMods.Count} active mods found.");
 
                 foreach (var mod in activeMods)
                 {
-                    string defaultJsonPath = System.IO.Path.Combine(modDirectoryPath, mod.Dir, "default_mod.json");
-                    if (System.IO.File.Exists(defaultJsonPath))
+                    // Skip our own generated mods
+                    string lnm = mod.Name.ToLower();
+                    string ldr = mod.Dir.ToLower();
+                    if (lnm.Contains("texture body") || lnm.Contains("texture face") || lnm.Contains("texture eyes") || lnm.Contains("texture eyebrows") || lnm.Contains("texture mod") || ldr.Contains("do_not_edit"))
                     {
-                        string json = System.IO.File.ReadAllText(defaultJsonPath);
-                        if (CheckIfJsonIsBodyType(mod.Name, mod.Dir, json, out int type)) { detectedModName = mod.Name; return type; }
+                        plugin?.Chat?.Print($"[Drag And Drop Debug] Skipping own mod: '{mod.Name}'");
+                        continue;
                     }
-                    if (System.IO.Directory.Exists(System.IO.Path.Combine(modDirectoryPath, mod.Dir)))
+
+                    Dictionary<string, string> files = GetFilesForMod(modDirectoryPath, mod.Dir, mod.Settings);
+                    
+                    // Count paths per body type — the dominant type has more paths
+                    int biboCount = 0, gen3Count = 0, tbseCount = 0;
+                    foreach (var key in files.Keys)
                     {
-                        foreach (var file in System.IO.Directory.GetFiles(System.IO.Path.Combine(modDirectoryPath, mod.Dir), "group_*.json"))
-                        {
-                            string json = System.IO.File.ReadAllText(file);
-                            if (CheckIfJsonIsBodyType(mod.Name, mod.Dir, json, out int type)) { detectedModName = mod.Name; return type; }
-                        }
+                        string lowerKey = key.ToLowerInvariant();
+                        if (lowerKey.StartsWith("chara/bibo_")) biboCount++;
+                        if (lowerKey.Contains("tfgen3")) gen3Count++;
+                        if (lowerKey.Contains("_b_d") && lowerKey.Contains("obj/body")) tbseCount++;
+                    }
+
+                    int bodyTypeCount = (biboCount > 0 ? 1 : 0) + (gen3Count > 0 ? 1 : 0) + (tbseCount > 0 ? 1 : 0);
+
+                    if (bodyTypeCount == 1)
+                    {
+                        detectedModName = mod.Name;
+                        int result = biboCount > 0 ? 1 : gen3Count > 0 ? 2 : 3;
+                        plugin?.Chat?.Print($"[Drag And Drop Debug] Body detected via paths: '{mod.Name}' -> type {result}");
+                        return result;
+                    }
+                    else if (bodyTypeCount > 1)
+                    {
+                        // Multiple body types — check name first, then use whichever has more paths
+                        detectedModName = mod.Name;
+                        plugin?.Chat?.Print($"[Drag And Drop Debug] Multiple body types in '{mod.Name}' (bibo={biboCount}, gen3={gen3Count}, tbse={tbseCount}). Checking name...");
+                        if (lnm.Contains("bibo") || lnm.Contains("yab") || lnm.Contains("b+") || ldr.Contains("bibo")) return 1;
+                        if (lnm.Contains("gen3") || lnm.Contains("tight & firm") || lnm.Contains("eve") || ldr.Contains("gen3")) return 2;
+                        if (lnm.Contains("tbse") || ldr.Contains("tbse")) return 3;
+                        // Name didn't help — the type with the most paths is the primary one
+                        int max = Math.Max(biboCount, Math.Max(gen3Count, tbseCount));
+                        int dominant = gen3Count == max ? 2 : biboCount == max ? 1 : 3;
+                        plugin?.Chat?.Print($"[Drag And Drop Debug] Name inconclusive. Dominant path count wins: type {dominant}");
+                        return dominant;
+                    }
+                    else
+                    {
+                        // No body paths found — check mod name/dir as last resort
+                        if (lnm.Contains("bibo") || lnm.Contains("yab") || lnm.Contains("b+") || ldr.Contains("bibo")) { detectedModName = mod.Name; plugin?.Chat?.Print($"[Drag And Drop Debug] Body detected via name: '{mod.Name}' -> Bibo"); return 1; }
+                        if (lnm.Contains("gen3") || lnm.Contains("tight & firm") || ldr.Contains("gen3")) { detectedModName = mod.Name; plugin?.Chat?.Print($"[Drag And Drop Debug] Body detected via name: '{mod.Name}' -> Gen3"); return 2; }
+                        if (lnm.Contains("tbse") || ldr.Contains("tbse")) { detectedModName = mod.Name; plugin?.Chat?.Print($"[Drag And Drop Debug] Body detected via name: '{mod.Name}' -> TBSE"); return 3; }
                     }
                 }
             }
             catch (Exception ex) { Log?.Warning(ex, "Failed to detect base body from Penumbra"); }
+            plugin?.Chat?.Print("[Drag And Drop Debug] DetectBaseBody: No body mod found!");
             return -1;
-        }
-
-        private static bool CheckIfJsonIsBodyType(string name, string dir, string json, out int type)
-        {
-            type = 2;
-            string lowerName = name.ToLower();
-            string lowerDir = dir.ToLower();
-            string lowerJson = json.ToLower();
-            if (lowerName.Contains("gen3") || lowerName.Contains("eve") || lowerDir.Contains("gen3") || lowerJson.Contains("gen3") || lowerJson.Contains("eve")) { type = 2; return true; }
-            if (lowerName.Contains("tbse") || lowerDir.Contains("tbse") || lowerJson.Contains("tbse")) { type = 3; return true; }
-            if (lowerName.Contains("yab") || lowerDir.Contains("yab") || lowerJson.Contains("yab") || lowerName.Contains("bibo") || lowerName.Contains("b+") || lowerDir.Contains("bibo") || lowerJson.Contains("bibo")) { type = 1; return true; }
-            return false;
         }
 
         public static void ExtractActiveTextureFromPenumbra(Guid collectionId, string category, string raceCode, string subRaceName, out string extractedModName, out string extractedBase, out string extractedNormal, out string extractedMask, DragAndDropTexturing.Plugin plugin, FFXIVLooseTextureCompiler.PathOrganization.TextureSet item = null)
