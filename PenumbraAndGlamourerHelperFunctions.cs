@@ -16,6 +16,8 @@ using System.Threading.Tasks;
 using Dalamud.IoC;
 using System.Text.RegularExpressions;
 using System.IO;
+using FFXIVLooseTextureCompiler.Export;
+using FFXIVLooseTextureCompiler.Racial;
 
 namespace PenumbraAndGlamourerHelpers
 {
@@ -178,9 +180,17 @@ namespace PenumbraAndGlamourerHelpers
                         var equipObject = JsonConvert.DeserializeObject<EquipObject>(equipItemJson);
                         switch (equipObject.ItemId.Id)
                         {
-                            case 9292: case 9293: case 9294: case 9295:
-                            case 10032: case 10033: case 10034: case 10035: case 10036:
-                            case 13775: case 0:
+                            case 9292:
+                            case 9293:
+                            case 9294:
+                            case 9295:
+                            case 10032:
+                            case 10033:
+                            case 10034:
+                            case 10035:
+                            case 10036:
+                            case 13775:
+                            case 0:
                                 return false;
                         }
                     }
@@ -213,27 +223,33 @@ namespace PenumbraAndGlamourerHelpers
             }
         }
 
+        public static List<(string Name, string Dir, int Priority, Dictionary<string, List<string>> Settings)> GetActiveMods(Guid collectionId)
+        {
+            var mods = PenumbraAndGlamourerIpcWrapper.Instance.GetModList.Invoke();
+            List<(string Name, string Dir, int Priority, Dictionary<string, List<string>> Settings)> activeMods = new List<(string Name, string Dir, int Priority, Dictionary<string, List<string>> Settings)>();
+
+            foreach (var mod in mods)
+            {
+                string lowerKey = mod.Key.ToLower();
+                string lowerValue = mod.Value.ToLower();
+                if (lowerValue.Contains("drag and drop") || lowerKey.Contains("drag and drop") || lowerValue.Contains("loosetexturecompilerdlc") || lowerKey.Contains("loosetexturecompilerdlc")) continue;
+
+                var settings = PenumbraAndGlamourerIpcWrapper.Instance.GetCurrentModSettings.Invoke(collectionId, mod.Key, mod.Value, true);
+                if (settings.Item1 == Penumbra.Api.Enums.PenumbraApiEc.Success && settings.Item2.HasValue && settings.Item2.Value.Item1 == true)
+                    activeMods.Add((mod.Value, mod.Key, settings.Item2.Value.Item2, settings.Item2.Value.Item3));
+            }
+
+            activeMods.Sort((a, b) => b.Priority.CompareTo(a.Priority));
+            return activeMods;
+        }
+
         public static int DetectBaseBodyFromPenumbra(Guid collectionId, out string detectedModName)
         {
             detectedModName = "";
             try
             {
-                var mods = PenumbraAndGlamourerIpcWrapper.Instance.GetModList.Invoke();
+                var activeMods = GetActiveMods(collectionId);
                 string modDirectoryPath = PenumbraAndGlamourerIpcWrapper.Instance.GetModDirectory.Invoke();
-                List<(string Name, string Dir, int Priority)> activeMods = new List<(string Name, string Dir, int Priority)>();
-
-                foreach (var mod in mods)
-                {
-                    string lowerKey = mod.Key.ToLower();
-                    string lowerValue = mod.Value.ToLower();
-                    if (lowerValue.Contains("drag and drop") || lowerKey.Contains("drag and drop") || lowerValue.Contains("loosetexturecompilerdlc") || lowerKey.Contains("loosetexturecompilerdlc")) continue;
-
-                    var settings = PenumbraAndGlamourerIpcWrapper.Instance.GetCurrentModSettings.Invoke(collectionId, mod.Key, mod.Value, true);
-                    if (settings.Item1 == Penumbra.Api.Enums.PenumbraApiEc.Success && settings.Item2.HasValue && settings.Item2.Value.Item1 == true)
-                        activeMods.Add((mod.Value, mod.Key, settings.Item2.Value.Item2));
-                }
-
-                activeMods.Sort((a, b) => b.Priority.CompareTo(a.Priority));
 
                 foreach (var mod in activeMods)
                 {
@@ -333,6 +349,120 @@ namespace PenumbraAndGlamourerHelpers
             }
         }
 
+        public static void PopulateOmniOverrides(Guid collectionId, int gender, int race, DragAndDropTexturing.Plugin plugin)
+        {
+            if (!BackupTexturePaths.OverrideMode) return;
+
+            try
+            {
+                plugin.Chat.Print("[Drag And Drop Debug] Populating Omni Overrides...");
+                string modDirectoryPath = PenumbraAndGlamourerIpcWrapper.Instance.GetModDirectory.Invoke();
+                var mods = PenumbraAndGlamourerIpcWrapper.Instance.GetModList.Invoke();
+
+                List<(string Name, string Dir, int Priority, Dictionary<string, List<string>> Settings)> activeMods = new List<(string Name, string Dir, int Priority, Dictionary<string, List<string>> Settings)>();
+                foreach (var mod in mods)
+                {
+                    if (mod.Value.Contains("Drag And Drop") || mod.Key.Contains("Drag And Drop") || mod.Key.Contains("do_not_edit")) continue;
+                    var settings = PenumbraAndGlamourerIpcWrapper.Instance.GetCurrentModSettings.Invoke(collectionId, mod.Key, mod.Value, true);
+                    if (settings.Item1 == PenumbraApiEc.Success && settings.Item2.HasValue && settings.Item2.Value.Item1)
+                    {
+                        activeMods.Add((mod.Value, mod.Key, settings.Item2.Value.Item2, settings.Item2.Value.Item3));
+                    }
+                }
+                activeMods.Sort((a, b) => b.Priority.CompareTo(a.Priority));
+
+                // Detect if character is redirected to another race (e.g. Hroth to Midlander)
+                int mainRace = RaceInfo.SubRaceToMainRace(race);
+
+                foreach (var mod in activeMods)
+                {
+                    Dictionary<string, string> files = GetFilesForMod(modDirectoryPath, mod.Dir, mod.Settings);
+                    plugin.Chat.Print($"[Drag And Drop Debug] Checking mod {mod.Name} for compatibility textures (Effective Race: {mainRace})...");
+
+                    // Check Bibo+ (baseBody 1)
+                    BackupTexturePaths.BiboOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, 1, gender, mainRace, BackupTexturePaths.BiboOverride, plugin);
+                    // Check Gen3 (baseBody 2)
+                    BackupTexturePaths.Gen3Override = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, 2, gender, mainRace, BackupTexturePaths.Gen3Override, plugin);
+                    // Check Vanilla/Gen2 (baseBody 0)
+                    BackupTexturePaths.Gen2Override = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, 0, gender, mainRace, BackupTexturePaths.Gen2Override, plugin);
+                    // Check TBSE (baseBody 3)
+                    BackupTexturePaths.TbseOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, 3, gender, mainRace, BackupTexturePaths.TbseOverride, plugin);
+                    // Check Otopop (baseBody 5)
+                    BackupTexturePaths.OtopopOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, 5, gender, mainRace, BackupTexturePaths.OtopopOverride, plugin);
+                    // Check Asym Lalafell (baseBody 6)
+                    BackupTexturePaths.VanillaLalaOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, 6, gender, mainRace, BackupTexturePaths.VanillaLalaOverride, plugin);
+                    // Check Relala (baseBody 7)
+                    BackupTexturePaths.RelalaOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, 7, gender, mainRace, BackupTexturePaths.RelalaOverride, plugin);
+                }
+                plugin.Chat.Print("[Drag And Drop Debug] Omni Overrides population check complete.");
+            }
+            catch (Exception ex)
+            {
+                plugin.Chat.Print($"[Drag And Drop Debug] ERROR in PopulateOmniOverrides: {ex.Message}");
+            }
+        }
+
+        private static BackupTexturePaths CheckAndSetOverride(Dictionary<string, string> files, string modDir, string subDir, int baseBody, int gender, int race, BackupTexturePaths overrideField, DragAndDropTexturing.Plugin plugin)
+        {
+            // Only set if not already found by a higher priority mod
+            string basePath = RacePaths.GetBodyTexturePath(0, gender, baseBody, race, 0).ToLowerInvariant().Replace("\\", "/");
+            if (!string.IsNullOrEmpty(basePath) && files.TryGetValue(basePath, out string baseMatch))
+            {
+                if (baseMatch.Contains("do_not_edit") || baseMatch.Contains("_generated")) return overrideField;
+                string fullPath = Path.Combine(modDir, subDir, baseMatch.Replace("/", "\\"));
+                if (File.Exists(fullPath))
+                {
+                    plugin.Chat.Print($"[Drag And Drop Debug] Found override base for BodyType {baseBody}: {basePath}");
+                    // Found base, now try to find normal
+                    string normPath = RacePaths.GetBodyTexturePath(1, gender, baseBody, race, 0).ToLowerInvariant().Replace("\\", "/");
+                    string fullNormPath = "";
+                    if (!string.IsNullOrEmpty(normPath) && files.TryGetValue(normPath, out string normMatch))
+                    {
+                        fullNormPath = Path.Combine(modDir, subDir, normMatch.Replace("/", "\\"));
+                    }
+
+                    return new BackupTexturePaths(fullPath, fullNormPath);
+                }
+            }
+            return overrideField;
+        }
+
+        public static int DetectRedirectedRace(Guid collectionId, int gender, int mainRace, DragAndDropTexturing.Plugin plugin = null)
+        {
+            return DetectRedirectedRace(GetActiveMods(collectionId), gender, mainRace, plugin);
+        }
+
+        public static int DetectRedirectedRace(List<(string Name, string Dir, int Priority, Dictionary<string, List<string>> Settings)> activeMods, int gender, int mainRace, DragAndDropTexturing.Plugin plugin = null)
+        {
+            string modDirectoryPath = PenumbraAndGlamourerIpcWrapper.Instance.GetModDirectory.Invoke();
+            if (plugin != null) plugin.Chat.Print($"[Drag And Drop Debug] Detecting redirection for Race {mainRace} (Gender: {gender})...");
+
+            // Try to find a redirection for any body type
+            for (int bodyType = 0; bodyType <= 3; bodyType++)
+            {
+                string nativePath = RacePaths.GetBodyTexturePath(0, gender, bodyType, mainRace, 0).ToLowerInvariant().Replace("\\", "/");
+                if (plugin != null) plugin.Chat.Print($"[Drag And Drop Debug] Checking native path: {nativePath}");
+
+                foreach (var mod in activeMods)
+                {
+                    var files = GetFilesForMod(modDirectoryPath, mod.Dir, mod.Settings);
+                    if (plugin != null) plugin.Chat.Print($"[Drag And Drop Debug] Mod '{mod.Name}' has {files.Count} files.");
+                    if (files.TryGetValue(nativePath, out string match))
+                    {
+                        if (plugin != null) plugin.Chat.Print($"[Drag And Drop Debug] Match found in mod '{mod.Name}': {match}");
+                        int redirected = RaceInfo.ReverseRaceLookup(match);
+                        if (redirected != -1 && redirected != mainRace)
+                        {
+                            if (plugin != null) plugin.Chat.Print($"[Drag And Drop Debug] REDIRECTED to Race {redirected} ({RaceInfo.Races[redirected]})");
+                            return redirected;
+                        }
+                    }
+                }
+            }
+            if (plugin != null) plugin.Chat.Print("[Drag And Drop Debug] No redirection detected.");
+            return -1;
+        }
+
         private static Dictionary<string, string> GetFilesForMod(string modDirectory, string modDir, Dictionary<string, List<string>> settings)
         {
             Dictionary<string, string> files = new Dictionary<string, string>();
@@ -345,7 +475,11 @@ namespace PenumbraAndGlamourerHelpers
                 try
                 {
                     var modData = JsonConvert.DeserializeObject<PenumbraModData>(File.ReadAllText(defaultJson));
-                    if (modData?.Files != null) foreach (var kvp in modData.Files) files[kvp.Key] = kvp.Value;
+                    if (modData?.Files != null)
+                    {
+                        foreach (var kvp in modData.Files)
+                            files[kvp.Key.ToLowerInvariant().Replace("\\", "/")] = kvp.Value;
+                    }
                 }
                 catch { }
             }
@@ -364,7 +498,8 @@ namespace PenumbraAndGlamourerHelpers
                             {
                                 if (activeOptions.Contains(option.Name) && option.Files != null)
                                 {
-                                    foreach (var kvp in option.Files) files[kvp.Key] = kvp.Value;
+                                    foreach (var kvp in option.Files)
+                                        files[kvp.Key.ToLowerInvariant().Replace("\\", "/")] = kvp.Value;
                                 }
                             }
                         }
