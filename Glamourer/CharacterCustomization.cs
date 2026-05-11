@@ -17,7 +17,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public long ItemId { get; set; }
         public int Stain { get; set; }
         public bool Crest { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
         public bool ApplyStain { get; set; }
         public bool ApplyCrest { get; set; }
     }
@@ -28,7 +28,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public int Value { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
 
     public class BustSize
@@ -37,7 +37,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public int Value { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
 
     public class Clan
@@ -46,7 +46,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public int Value { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
 
     public class Customize
@@ -140,7 +140,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public long ItemId { get; set; }
         public int Stain { get; set; }
         public bool Crest { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
         public bool ApplyStain { get; set; }
         public bool ApplyCrest { get; set; }
     }
@@ -192,7 +192,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public int Value { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
     public class Feet
     {
@@ -202,7 +202,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public long ItemId { get; set; }
         public int Stain { get; set; }
         public bool Crest { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
         public bool ApplyStain { get; set; }
         public bool ApplyCrest { get; set; }
     }
@@ -213,7 +213,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public int Value { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
 
     public class HairColor
@@ -222,7 +222,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public int Value { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
 
     public class Hairstyle
@@ -231,7 +231,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public int Value { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
 
     public class Hands
@@ -242,7 +242,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public long ItemId { get; set; }
         public int Stain { get; set; }
         public bool Crest { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
         public bool ApplyStain { get; set; }
         public bool ApplyCrest { get; set; }
     }
@@ -253,7 +253,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public bool Show { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
 
     public class Head
@@ -264,7 +264,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public long ItemId { get; set; }
         public int Stain { get; set; }
         public bool Crest { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
         public bool ApplyStain { get; set; }
         public bool ApplyCrest { get; set; }
     }
@@ -275,7 +275,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public int Value { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
 
     public class Highlights
@@ -284,7 +284,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public int Value { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
 
     public class HighlightsColor
@@ -293,7 +293,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public int Value { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
 
     public class Jaw
@@ -302,7 +302,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public int Value { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
 
     public class LegacyTattoo
@@ -311,7 +311,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public int Value { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
 
     public class Legs
@@ -322,7 +322,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public long ItemId { get; set; }
         public int Stain { get; set; }
         public bool Crest { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
         public bool ApplyStain { get; set; }
         public bool ApplyCrest { get; set; }
     }
@@ -335,7 +335,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public long ItemId { get; set; }
         public int Stain { get; set; }
         public bool Crest { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
         public bool ApplyStain { get; set; }
         public bool ApplyCrest { get; set; }
     }
@@ -346,7 +346,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public int Value { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
 
     public class Lipstick
@@ -355,7 +355,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public int Value { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
 
     public class MainHand
@@ -366,7 +366,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public ulong ItemId { get; set; }
         public int Stain { get; set; }
         public bool Crest { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
         public bool ApplyStain { get; set; }
         public bool ApplyCrest { get; set; }
     }
@@ -377,7 +377,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public int Value { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
 
     public class MuscleMass
@@ -386,7 +386,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public int Value { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
 
     public class Neck
@@ -397,7 +397,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public long ItemId { get; set; }
         public int Stain { get; set; }
         public bool Crest { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
         public bool ApplyStain { get; set; }
         public bool ApplyCrest { get; set; }
     }
@@ -408,7 +408,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public int Value { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
 
     public class OffHand
@@ -419,7 +419,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public long ItemId { get; set; }
         public int Stain { get; set; }
         public bool Crest { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
         public bool ApplyStain { get; set; }
         public bool ApplyCrest { get; set; }
     }
@@ -430,7 +430,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public int Value { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
 
     public class RFinger
@@ -441,7 +441,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public long ItemId { get; set; }
         public int Stain { get; set; }
         public bool Crest { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
         public bool ApplyStain { get; set; }
         public bool ApplyCrest { get; set; }
     }
@@ -481,7 +481,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public int Value { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
 
     public class SmallIris
@@ -490,7 +490,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public int Value { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
 
     public class TailShape
@@ -499,7 +499,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public int Value { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
 
     public class TattooColor
@@ -508,7 +508,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public int Value { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
 
     public class Visor
@@ -517,7 +517,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public bool IsToggled { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
 
     public class Weapon
@@ -526,7 +526,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public bool Show { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
 
     public class Wetness
@@ -535,7 +535,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
         public System.Collections.Generic.IDictionary<string, Newtonsoft.Json.Linq.JToken> AdditionalData;
 
         public bool Value { get; set; }
-        public bool Apply { get { return true; } set { var thing = value; } }
+        public bool Apply { get; set; } = true;
     }
 
     public class Wrists
