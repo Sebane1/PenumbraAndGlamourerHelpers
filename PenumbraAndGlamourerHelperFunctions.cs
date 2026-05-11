@@ -250,7 +250,7 @@ namespace PenumbraAndGlamourerHelpers
             {
                 var activeMods = GetActiveMods(collectionId);
                 string modDirectoryPath = PenumbraAndGlamourerIpcWrapper.Instance.GetModDirectory.Invoke();
-                plugin?.Chat?.Print($"[Drag And Drop Debug] DetectBaseBody: {activeMods.Count} active mods found.");
+                plugin?.PluginLog?.Information($"[Drag And Drop Debug] DetectBaseBody: {activeMods.Count} active mods found.");
 
                 foreach (var mod in activeMods)
                 {
@@ -259,7 +259,7 @@ namespace PenumbraAndGlamourerHelpers
                     string ldr = mod.Dir.ToLower();
                     if (lnm.Contains("texture body") || lnm.Contains("texture face") || lnm.Contains("texture eyes") || lnm.Contains("texture eyebrows") || lnm.Contains("texture mod") || ldr.Contains("do_not_edit"))
                     {
-                        plugin?.Chat?.Print($"[Drag And Drop Debug] Skipping own mod: '{mod.Name}'");
+                        plugin?.PluginLog?.Information($"[Drag And Drop Debug] Skipping own mod: '{mod.Name}'");
                         continue;
                     }
 
@@ -281,34 +281,34 @@ namespace PenumbraAndGlamourerHelpers
                     {
                         detectedModName = mod.Name;
                         int result = biboCount > 0 ? 1 : gen3Count > 0 ? 2 : 3;
-                        plugin?.Chat?.Print($"[Drag And Drop Debug] Body detected via paths: '{mod.Name}' -> type {result}");
+                        plugin?.PluginLog?.Information($"[Drag And Drop Debug] Body detected via paths: '{mod.Name}' -> type {result}");
                         return result;
                     }
                     else if (bodyTypeCount > 1)
                     {
                         // Multiple body types — check name first, then use whichever has more paths
                         detectedModName = mod.Name;
-                        plugin?.Chat?.Print($"[Drag And Drop Debug] Multiple body types in '{mod.Name}' (bibo={biboCount}, gen3={gen3Count}, tbse={tbseCount}). Checking name...");
+                        plugin?.PluginLog?.Information($"[Drag And Drop Debug] Multiple body types in '{mod.Name}' (bibo={biboCount}, gen3={gen3Count}, tbse={tbseCount}). Checking name...");
                         if (lnm.Contains("bibo") || lnm.Contains("yab") || lnm.Contains("b+") || ldr.Contains("bibo")) return 1;
                         if (lnm.Contains("gen3") || lnm.Contains("tight & firm") || lnm.Contains("eve") || ldr.Contains("gen3")) return 2;
                         if (lnm.Contains("tbse") || ldr.Contains("tbse")) return 3;
                         // Name didn't help — the type with the most paths is the primary one
                         int max = Math.Max(biboCount, Math.Max(gen3Count, tbseCount));
                         int dominant = gen3Count == max ? 2 : biboCount == max ? 1 : 3;
-                        plugin?.Chat?.Print($"[Drag And Drop Debug] Name inconclusive. Dominant path count wins: type {dominant}");
+                        plugin?.PluginLog?.Information($"[Drag And Drop Debug] Name inconclusive. Dominant path count wins: type {dominant}");
                         return dominant;
                     }
                     else
                     {
                         // No body paths found — check mod name/dir as last resort
-                        if (lnm.Contains("bibo") || lnm.Contains("yab") || lnm.Contains("b+") || ldr.Contains("bibo")) { detectedModName = mod.Name; plugin?.Chat?.Print($"[Drag And Drop Debug] Body detected via name: '{mod.Name}' -> Bibo"); return 1; }
-                        if (lnm.Contains("gen3") || lnm.Contains("tight & firm") || ldr.Contains("gen3")) { detectedModName = mod.Name; plugin?.Chat?.Print($"[Drag And Drop Debug] Body detected via name: '{mod.Name}' -> Gen3"); return 2; }
-                        if (lnm.Contains("tbse") || ldr.Contains("tbse")) { detectedModName = mod.Name; plugin?.Chat?.Print($"[Drag And Drop Debug] Body detected via name: '{mod.Name}' -> TBSE"); return 3; }
+                        if (lnm.Contains("bibo") || lnm.Contains("yab") || lnm.Contains("b+") || ldr.Contains("bibo")) { detectedModName = mod.Name; plugin?.PluginLog?.Information($"[Drag And Drop Debug] Body detected via name: '{mod.Name}' -> Bibo"); return 1; }
+                        if (lnm.Contains("gen3") || lnm.Contains("tight & firm") || ldr.Contains("gen3")) { detectedModName = mod.Name; plugin?.PluginLog?.Information($"[Drag And Drop Debug] Body detected via name: '{mod.Name}' -> Gen3"); return 2; }
+                        if (lnm.Contains("tbse") || ldr.Contains("tbse")) { detectedModName = mod.Name; plugin?.PluginLog?.Information($"[Drag And Drop Debug] Body detected via name: '{mod.Name}' -> TBSE"); return 3; }
                     }
                 }
             }
             catch (Exception ex) { Log?.Warning(ex, "Failed to detect base body from Penumbra"); }
-            plugin?.Chat?.Print("[Drag And Drop Debug] DetectBaseBody: No body mod found!");
+            plugin?.PluginLog?.Information("[Drag And Drop Debug] DetectBaseBody: No body mod found!");
             return -1;
         }
 
@@ -319,7 +319,7 @@ namespace PenumbraAndGlamourerHelpers
 
             try
             {
-                plugin.Chat.Print($"[Drag And Drop Debug] Searching for {category} texture. RaceCode: {raceCode}, InternalBase: {item.InternalBasePath}");
+                plugin.PluginLog.Information($"[Drag And Drop Debug] Searching for {category} texture. RaceCode: {raceCode}, InternalBase: {item.InternalBasePath}");
 
                 var mods = PenumbraAndGlamourerIpcWrapper.Instance.GetModList.Invoke();
                 string modDirectoryPath = PenumbraAndGlamourerIpcWrapper.Instance.GetModDirectory.Invoke();
@@ -370,21 +370,21 @@ namespace PenumbraAndGlamourerHelpers
                             if (!string.IsNullOrEmpty(maskLookup) && files.TryGetValue(maskLookup, out string maskMatch))
                                 extractedMask = Path.Combine(modDirectoryPath, mod.Dir, maskMatch.Replace("/", "\\"));
 
-                            plugin.Chat.Print($"[Drag And Drop Debug] Found base: {item.InternalBasePath} in mod {mod.Name}");
+                            plugin.PluginLog.Information($"[Drag And Drop Debug] Found base: {item.InternalBasePath} in mod {mod.Name}");
                             return;
                         }
                         else
                         {
-                            plugin.Chat.Print($"[Drag And Drop Debug] Path matched in {mod.Name} but file not found: {fullPath}");
+                            plugin.PluginLog.Information($"[Drag And Drop Debug] Path matched in {mod.Name} but file not found: {fullPath}");
                         }
                     }
                 }
 
-                plugin.Chat.Print($"[Drag And Drop Debug] No modded {category} texture found for path: {item.InternalBasePath}");
+                plugin.PluginLog.Information($"[Drag And Drop Debug] No modded {category} texture found for path: {item.InternalBasePath}");
             }
             catch (Exception ex)
             {
-                plugin.Chat.Print($"[Drag And Drop Debug] ERROR in ExtractActiveTextureFromPenumbra: {ex.Message}");
+                plugin.PluginLog.Information($"[Drag And Drop Debug] ERROR in ExtractActiveTextureFromPenumbra: {ex.Message}");
             }
         }
 
@@ -419,31 +419,33 @@ namespace PenumbraAndGlamourerHelpers
                     plugin?.PluginLog?.Information($"[Drag And Drop Debug] Checking mod {mod.Name} for compatibility textures (Effective Race: {mainRace})...");
 
                     // Check Bibo+ (baseBody 1)
-                    BackupTexturePaths.BiboOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, 1, gender, mainRace, BackupTexturePaths.BiboOverride, plugin);
+                    BackupTexturePaths.BiboOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 1, gender, mainRace, BackupTexturePaths.BiboOverride, plugin);
                     // Check Gen3 (baseBody 2)
-                    BackupTexturePaths.Gen3Override = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, 2, gender, mainRace, BackupTexturePaths.Gen3Override, plugin);
+                    BackupTexturePaths.Gen3Override = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 2, gender, mainRace, BackupTexturePaths.Gen3Override, plugin);
                     // Check Vanilla/Gen2 (baseBody 0)
-                    BackupTexturePaths.Gen2Override = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, 0, gender, mainRace, BackupTexturePaths.Gen2Override, plugin);
+                    BackupTexturePaths.Gen2Override = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 0, gender, mainRace, BackupTexturePaths.Gen2Override, plugin);
                     // Check TBSE (baseBody 3)
-                    BackupTexturePaths.TbseOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, 3, gender, mainRace, BackupTexturePaths.TbseOverride, plugin);
+                    BackupTexturePaths.TbseOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 3, gender, mainRace, BackupTexturePaths.TbseOverride, plugin);
                     // Check Otopop (baseBody 5)
-                    BackupTexturePaths.OtopopOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, 5, gender, mainRace, BackupTexturePaths.OtopopOverride, plugin);
+                    BackupTexturePaths.OtopopOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 5, gender, mainRace, BackupTexturePaths.OtopopOverride, plugin);
                     // Check Asym Lalafell (baseBody 6)
-                    BackupTexturePaths.VanillaLalaOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, 6, gender, mainRace, BackupTexturePaths.VanillaLalaOverride, plugin);
+                    BackupTexturePaths.VanillaLalaOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 6, gender, mainRace, BackupTexturePaths.VanillaLalaOverride, plugin);
                     // Check Relala (baseBody 7)
-                    BackupTexturePaths.RelalaOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, 7, gender, mainRace, BackupTexturePaths.RelalaOverride, plugin);
+                    BackupTexturePaths.RelalaOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 7, gender, mainRace, BackupTexturePaths.RelalaOverride, plugin);
                 }
                 plugin?.PluginLog?.Information("[Drag And Drop Debug] Omni Overrides population check complete.");
             }
             catch (Exception ex)
             {
-                plugin.Chat.Print($"[Drag And Drop Debug] ERROR in PopulateOmniOverrides: {ex.Message}");
+                plugin.PluginLog.Information($"[Drag And Drop Debug] ERROR in PopulateOmniOverrides: {ex.Message}");
             }
         }
 
-        private static BackupTexturePaths CheckAndSetOverride(Dictionary<string, string> files, string modDir, string subDir, int baseBody, int gender, int race, BackupTexturePaths overrideField, DragAndDropTexturing.Plugin plugin)
+        private static BackupTexturePaths CheckAndSetOverride(Dictionary<string, string> files, string modDir, string subDir, string modName, int baseBody, int gender, int race, BackupTexturePaths overrideField, DragAndDropTexturing.Plugin plugin)
         {
             // Only set if not already found by a higher priority mod
+            if (overrideField != null) return overrideField;
+
             string basePath = RacePaths.GetBodyTexturePath(0, gender, baseBody, race, 0).ToLowerInvariant().Replace("\\", "/");
             if (!string.IsNullOrEmpty(basePath) && files.TryGetValue(basePath, out string baseMatch))
             {
@@ -451,7 +453,7 @@ namespace PenumbraAndGlamourerHelpers
                 string fullPath = Path.Combine(modDir, subDir, baseMatch.Replace("/", "\\"));
                 if (File.Exists(fullPath))
                 {
-                    plugin.Chat.Print($"[Drag And Drop Debug] Found override base for BodyType {baseBody}: {basePath}");
+                    plugin.PluginLog.Information($"[Drag And Drop Debug] Found override base for BodyType {baseBody}: {basePath}");
                     // Found base, now try to find normal
                     string normPath = RacePaths.GetBodyTexturePath(1, gender, baseBody, race, 0).ToLowerInvariant().Replace("\\", "/");
                     string fullNormPath = "";
@@ -460,7 +462,9 @@ namespace PenumbraAndGlamourerHelpers
                         fullNormPath = Path.Combine(modDir, subDir, normMatch.Replace("/", "\\"));
                     }
 
-                    return new BackupTexturePaths(fullPath, fullNormPath);
+                    var btp = new BackupTexturePaths(fullPath, fullNormPath);
+                    btp.ModName = modName;
+                    return btp;
                 }
             }
             return overrideField;
@@ -474,31 +478,31 @@ namespace PenumbraAndGlamourerHelpers
         public static int DetectRedirectedRace(List<(string Name, string Dir, int Priority, Dictionary<string, List<string>> Settings)> activeMods, int gender, int mainRace, DragAndDropTexturing.Plugin plugin = null)
         {
             string modDirectoryPath = PenumbraAndGlamourerIpcWrapper.Instance.GetModDirectory.Invoke();
-            if (plugin != null) plugin.Chat.Print($"[Drag And Drop Debug] Detecting redirection for Race {mainRace} (Gender: {gender})...");
+            if (plugin != null) plugin.PluginLog.Information($"[Drag And Drop Debug] Detecting redirection for Race {mainRace} (Gender: {gender})...");
 
             // Try to find a redirection for any body type
             for (int bodyType = 0; bodyType <= 3; bodyType++)
             {
                 string nativePath = RacePaths.GetBodyTexturePath(0, gender, bodyType, mainRace, 0).ToLowerInvariant().Replace("\\", "/");
-                if (plugin != null) plugin.Chat.Print($"[Drag And Drop Debug] Checking native path: {nativePath}");
+                if (plugin != null) plugin.PluginLog.Information($"[Drag And Drop Debug] Checking native path: {nativePath}");
 
                 foreach (var mod in activeMods)
                 {
                     var files = GetFilesForMod(modDirectoryPath, mod.Dir, mod.Settings);
-                    if (plugin != null) plugin.Chat.Print($"[Drag And Drop Debug] Mod '{mod.Name}' has {files.Count} files.");
+                    if (plugin != null) plugin.PluginLog.Information($"[Drag And Drop Debug] Mod '{mod.Name}' has {files.Count} files.");
                     if (files.TryGetValue(nativePath, out string match))
                     {
-                        if (plugin != null) plugin.Chat.Print($"[Drag And Drop Debug] Match found in mod '{mod.Name}': {match}");
+                        if (plugin != null) plugin.PluginLog.Information($"[Drag And Drop Debug] Match found in mod '{mod.Name}': {match}");
                         int redirected = RaceInfo.ReverseRaceLookup(match);
                         if (redirected != -1 && redirected != mainRace)
                         {
-                            if (plugin != null) plugin.Chat.Print($"[Drag And Drop Debug] REDIRECTED to Race {redirected} ({RaceInfo.Races[redirected]})");
+                            if (plugin != null) plugin.PluginLog.Information($"[Drag And Drop Debug] REDIRECTED to Race {redirected} ({RaceInfo.Races[redirected]})");
                             return redirected;
                         }
                     }
                 }
             }
-            if (plugin != null) plugin.Chat.Print("[Drag And Drop Debug] No redirection detected.");
+            if (plugin != null) plugin.PluginLog.Information("[Drag And Drop Debug] No redirection detected.");
             return -1;
         }
 
