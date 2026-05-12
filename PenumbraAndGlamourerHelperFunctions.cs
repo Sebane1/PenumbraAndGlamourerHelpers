@@ -333,7 +333,7 @@ namespace PenumbraAndGlamourerHelpers
                     // SKIP OUR OWN MODS — our generated mods always end with "Texture Body/Face/Eyes/Eyebrows"
                     string modNameLower = mod.Value.ToLower();
                     string modDirLower = mod.Key.ToLower();
-                    if (modNameLower.Contains("drag and drop") || modDirLower.Contains("drag and drop") || modDirLower.Contains("do_not_edit") ||
+                    if (modNameLower.Contains("drag and drop") || modDirLower.Contains("drag and drop") ||
                         modNameLower.EndsWith("texture body") || modNameLower.EndsWith("texture face") || modNameLower.EndsWith("texture eyes") ||
                         modNameLower.EndsWith("texture eyebrows") || modNameLower.EndsWith("texture mod")) continue;
 
@@ -356,8 +356,7 @@ namespace PenumbraAndGlamourerHelpers
                     string maskLookup = item.InternalMaskPath?.ToLowerInvariant().Replace("\\", "/") ?? "";
                     if (!string.IsNullOrEmpty(baseLookup) && files.TryGetValue(baseLookup, out string baseMatch))
                     {
-                        // Skip generated files
-                        if (baseMatch.Contains("do_not_edit") || baseMatch.Contains("_generated")) continue;
+
 
                         string fullPath = Path.Combine(modDirectoryPath, mod.Dir, baseMatch.Replace("/", "\\"));
                         if (File.Exists(fullPath))
@@ -412,7 +411,11 @@ namespace PenumbraAndGlamourerHelpers
                 List<(string Name, string Dir, int Priority, Dictionary<string, List<string>> Settings)> activeMods = new List<(string Name, string Dir, int Priority, Dictionary<string, List<string>> Settings)>();
                 foreach (var mod in mods)
                 {
-                    if (mod.Value.Contains("Drag And Drop") || mod.Key.Contains("Drag And Drop") || mod.Key.Contains("do_not_edit")) continue;
+                    string modNameLower = mod.Value.ToLower();
+                    string modDirLower = mod.Key.ToLower();
+                    if (modNameLower.Contains("drag and drop") || modDirLower.Contains("drag and drop") ||
+                        modNameLower.EndsWith("texture body") || modNameLower.EndsWith("texture face") || modNameLower.EndsWith("texture eyes") ||
+                        modNameLower.EndsWith("texture eyebrows") || modNameLower.EndsWith("texture mod")) continue;
                     var settings = PenumbraAndGlamourerIpcWrapper.Instance.GetCurrentModSettings.Invoke(collectionId, mod.Key, mod.Value, true);
                     if (settings.Item1 == PenumbraApiEc.Success && settings.Item2.HasValue && settings.Item2.Value.Item1)
                     {
@@ -504,7 +507,14 @@ namespace PenumbraAndGlamourerHelpers
                         FastUVTransfer.BiboToGen3(BackupTexturePaths.BiboOverride.Normal, outNorm);
                     }
 
-                    var btp = new BackupTexturePaths(outBase, outNorm);
+                    string outMask = "";
+                    if (!string.IsNullOrEmpty(BackupTexturePaths.BiboOverride.Mask) && File.Exists(BackupTexturePaths.BiboOverride.Mask))
+                    {
+                        outMask = Path.Combine(crossConvertDir, BackupTexturePaths.BiboOverride.ModName + Path.GetFileName(BackupTexturePaths.BiboOverride.Mask).Replace(".tex", ".png"));
+                        FastUVTransfer.BiboToGen3(BackupTexturePaths.BiboOverride.Mask, outMask);
+                    }
+
+                    var btp = new BackupTexturePaths(outBase, outNorm, outMask);
                     btp.ModName = BackupTexturePaths.BiboOverride.ModName + " (Auto-Converted Gen3)";
                     BackupTexturePaths.Gen3Override = btp;
 
@@ -525,7 +535,14 @@ namespace PenumbraAndGlamourerHelpers
                         FastUVTransfer.Gen3ToBibo(BackupTexturePaths.Gen3Override.Normal, outNorm);
                     }
 
-                    var btp = new BackupTexturePaths(outBase, outNorm);
+                    string outMask = "";
+                    if (!string.IsNullOrEmpty(BackupTexturePaths.Gen3Override.Mask) && File.Exists(BackupTexturePaths.Gen3Override.Mask))
+                    {
+                        outMask = Path.Combine(crossConvertDir, BackupTexturePaths.Gen3Override.ModName + Path.GetFileName(BackupTexturePaths.Gen3Override.Mask).Replace(".tex", ".png"));
+                        FastUVTransfer.Gen3ToBibo(BackupTexturePaths.Gen3Override.Mask, outMask);
+                    }
+
+                    var btp = new BackupTexturePaths(outBase, outNorm, outMask);
                     btp.ModName = BackupTexturePaths.Gen3Override.ModName + " (Auto-Converted Bibo+)";
                     BackupTexturePaths.BiboOverride = btp;
 
@@ -540,142 +557,121 @@ namespace PenumbraAndGlamourerHelpers
 
         private static BackupTexturePaths CheckAndSetOverride(Dictionary<string, string> files, string modDir, string subDir, string modName, int baseBody, int gender, int race, BackupTexturePaths overrideField, DragAndDropTexturing.Plugin plugin)
         {
-            // Only set if not already found by a higher priority mod
-            if (overrideField != null) return overrideField;
+            // If already fully populated (base + normal + mask all set), nothing to do
+            if (overrideField != null && !overrideField.NeedsNormal && !overrideField.NeedsMask)
+                return overrideField;
 
-            string basePath = RacePaths.GetBodyTexturePath(0, gender, baseBody, race, 0).ToLowerInvariant().Replace("\\", "/");
-            string basePathV01 = !string.IsNullOrEmpty(basePath) ? basePath.Replace("/texture/c", "/texture/v01_c").Replace("/texture/tfgen3", "/texture/v01_tfgen3") : "";
-
-            // Try standard path first, then v01 variant
-            string foundBaseMatch = null;
-            if (!string.IsNullOrEmpty(basePath) && files.TryGetValue(basePath, out string m1)) foundBaseMatch = m1;
-            else if (!string.IsNullOrEmpty(basePathV01) && files.TryGetValue(basePathV01, out string m2)) foundBaseMatch = m2;
-
-            // Broader fallback: scan file keys for body-type markers + race identifier
-            if (foundBaseMatch == null)
+            // Helper: try to find a texture match in this mod for a given texture type
+            string FindTexture(int textureType, string suffix)
             {
-                string bodyMarker = null;
-                string raceId = null;
-                switch (baseBody)
-                {
-                    case 1: // Bibo+
-                        bodyMarker = "chara/bibo_";
-                        // Extract race id from the generated basePath (e.g., "chara/bibo_vieraf_base.tex" -> "viera")
-                        if (!string.IsNullOrEmpty(basePath) && basePath.StartsWith("chara/bibo_"))
-                        {
-                            string afterMarker = basePath.Substring(11); // after "chara/bibo_"
-                            int endIdx = afterMarker.IndexOf('f'); // race ids end before 'f' (feminine suffix)
-                            if (endIdx > 0) raceId = afterMarker.Substring(0, endIdx);
-                        }
-                        break;
-                    case 2: // Gen3
-                        bodyMarker = "tfgen3";
-                        // Extract race id from basePath (e.g., "...tfgen3virf_base.tex" -> "vir")
-                        if (!string.IsNullOrEmpty(basePath))
-                        {
-                            int tfIdx = basePath.IndexOf("tfgen3");
-                            if (tfIdx >= 0)
-                            {
-                                string afterGen3 = basePath.Substring(tfIdx + 6); // after "tfgen3"
-                                int endIdx = afterGen3.IndexOf('f'); // before feminine suffix
-                                if (endIdx > 0) raceId = afterGen3.Substring(0, endIdx);
-                            }
-                        }
-                        break;
-                }
+                string texPath = RacePaths.GetBodyTexturePath(textureType, gender, baseBody, race, 0).ToLowerInvariant().Replace("\\", "/");
+                string texPathV01 = !string.IsNullOrEmpty(texPath) ? texPath.Replace("/texture/c", "/texture/v01_c").Replace("/texture/tfgen3", "/texture/v01_tfgen3") : "";
 
-                if (bodyMarker != null && !string.IsNullOrEmpty(raceId) && raceId != "invalid")
+                string match = null;
+                if (!string.IsNullOrEmpty(texPath) && files.TryGetValue(texPath, out string v1)) match = v1;
+                else if (!string.IsNullOrEmpty(texPathV01) && files.TryGetValue(texPathV01, out string v2)) match = v2;
+
+                // Broader fallback (race-aware)
+                if (match == null)
                 {
-                    foreach (var key in files.Keys)
+                    string bodyMarker = null;
+                    string raceId = null;
+                    switch (baseBody)
                     {
-                        if (key.Contains(bodyMarker) && key.Contains(raceId) && key.EndsWith("_base.tex"))
-                        {
-                            foundBaseMatch = files[key];
-                            basePath = key;
+                        case 1: // Bibo+
+                            bodyMarker = "chara/bibo_";
+                            if (!string.IsNullOrEmpty(texPath) && texPath.StartsWith("chara/bibo_"))
+                            {
+                                string afterMarker = texPath.Substring(11);
+                                int endIdx = afterMarker.IndexOf('f');
+                                if (endIdx > 0) raceId = afterMarker.Substring(0, endIdx);
+                            }
                             break;
-                        }
-                    }
-                }
-            }
-
-            if (foundBaseMatch != null)
-            {
-                if (foundBaseMatch.Contains("do_not_edit") || foundBaseMatch.Contains("_generated")) return overrideField;
-                string fullPath = Path.Combine(modDir, subDir, foundBaseMatch.Replace("/", "\\"));
-                if (File.Exists(fullPath))
-                {
-                    plugin?.PluginLog?.Information($"[Drag And Drop Debug] Found override base for BodyType {baseBody} in '{modName}': {basePath}");
-                    // Found base, now try to find normal
-                    string normPath = RacePaths.GetBodyTexturePath(1, gender, baseBody, race, 0).ToLowerInvariant().Replace("\\", "/");
-                    string normPathV01 = !string.IsNullOrEmpty(normPath) ? normPath.Replace("/texture/c", "/texture/v01_c").Replace("/texture/tfgen3", "/texture/v01_tfgen3") : "";
-                    string fullNormPath = "";
-
-                    string foundNormMatch = null;
-                    if (!string.IsNullOrEmpty(normPath) && files.TryGetValue(normPath, out string n1)) foundNormMatch = n1;
-                    else if (!string.IsNullOrEmpty(normPathV01) && files.TryGetValue(normPathV01, out string n2)) foundNormMatch = n2;
-
-                    // Broader normal fallback (race-aware)
-                    if (foundNormMatch == null)
-                    {
-                        string bodyMarkerN = null;
-                        string raceIdN = null;
-                        switch (baseBody)
-                        {
-                            case 1:
-                                bodyMarkerN = "chara/bibo_";
-                                if (!string.IsNullOrEmpty(normPath) && normPath.StartsWith("chara/bibo_"))
-                                {
-                                    string afterMarker = normPath.Substring(11);
-                                    int endIdx = afterMarker.IndexOf('f');
-                                    if (endIdx > 0) raceIdN = afterMarker.Substring(0, endIdx);
-                                }
-                                break;
-                            case 2:
-                                bodyMarkerN = "tfgen3";
-                                if (!string.IsNullOrEmpty(normPath))
-                                {
-                                    int tfIdx = normPath.IndexOf("tfgen3");
-                                    if (tfIdx >= 0)
-                                    {
-                                        string afterGen3 = normPath.Substring(tfIdx + 6);
-                                        int endIdx = afterGen3.IndexOf('f');
-                                        if (endIdx > 0) raceIdN = afterGen3.Substring(0, endIdx);
-                                    }
-                                }
-                                break;
-                        }
-                        if (bodyMarkerN != null && !string.IsNullOrEmpty(raceIdN) && raceIdN != "invalid")
-                        {
-                            foreach (var key in files.Keys)
+                        case 2: // Gen3
+                            bodyMarker = "tfgen3";
+                            if (!string.IsNullOrEmpty(texPath))
                             {
-                                if (key.Contains(bodyMarkerN) && key.Contains(raceIdN) && key.EndsWith("_norm.tex"))
+                                int tfIdx = texPath.IndexOf("tfgen3");
+                                if (tfIdx >= 0)
                                 {
-                                    foundNormMatch = files[key];
-                                    break;
+                                    string afterGen3 = texPath.Substring(tfIdx + 6);
+                                    int endIdx = afterGen3.IndexOf('f');
+                                    if (endIdx > 0) raceId = afterGen3.Substring(0, endIdx);
                                 }
+                            }
+                            break;
+                    }
+
+                    if (bodyMarker != null && !string.IsNullOrEmpty(raceId) && raceId != "invalid")
+                    {
+                        foreach (var key in files.Keys)
+                        {
+                            if (key.Contains(bodyMarker) && key.Contains(raceId) && key.EndsWith(suffix))
+                            {
+                                match = files[key];
+                                break;
                             }
                         }
                     }
-
-                    if (foundNormMatch != null)
-                    {
-                        fullNormPath = Path.Combine(modDir, subDir, foundNormMatch.Replace("/", "\\"));
-                    }
-
-                    var btp = new BackupTexturePaths(fullPath, fullNormPath);
-                    btp.ModName = modName;
-                    return btp;
                 }
-                else
-                {
-                    plugin?.PluginLog?.Information($"[Drag And Drop Debug] Path matched for BodyType {baseBody} in '{modName}' but file not found on disk: {fullPath}");
-                }
+
+                if (match == null) return null;
+                string fullPath = Path.Combine(modDir, subDir, match.Replace("/", "\\"));
+                return File.Exists(fullPath) ? fullPath : null;
             }
-            else
+
+            // --- Case 1: Override already exists but has gaps in normal/mask ---
+            if (overrideField != null)
             {
-                plugin?.PluginLog?.Information($"[Drag And Drop Debug] No match for BodyType {baseBody} in '{modName}' (tried: {basePath})");
+                bool filled = false;
+                if (overrideField.NeedsNormal)
+                {
+                    string normFullPath = FindTexture(1, "_norm.tex");
+                    if (normFullPath != null)
+                    {
+                        overrideField.FillNormal(normFullPath);
+                        plugin?.PluginLog?.Information($"[Drag And Drop Debug] Gap-filled normal for BodyType {baseBody} from '{modName}'");
+                        filled = true;
+                    }
+                }
+                if (overrideField.NeedsMask)
+                {
+                    string maskFullPath = FindTexture(2, "_mask.tex");
+                    if (maskFullPath != null)
+                    {
+                        overrideField.FillMask(maskFullPath);
+                        plugin?.PluginLog?.Information($"[Drag And Drop Debug] Gap-filled mask for BodyType {baseBody} from '{modName}'");
+                        filled = true;
+                    }
+                }
+                return overrideField;
             }
-            return overrideField;
+
+            // --- Case 2: No override yet — try to claim the slot with a base texture ---
+            string baseFullPath = FindTexture(0, "_base.tex");
+            if (baseFullPath == null)
+            {
+                // Also try non-verbose suffixes for vanilla body types
+                if (baseBody == 0 || baseBody == 3)
+                    baseFullPath = FindTexture(0, "_d.tex");
+            }
+
+            if (baseFullPath == null)
+            {
+                plugin?.PluginLog?.Information($"[Drag And Drop Debug] No match for BodyType {baseBody} in '{modName}'");
+                return overrideField;
+            }
+
+
+
+            plugin?.PluginLog?.Information($"[Drag And Drop Debug] Found override base for BodyType {baseBody} in '{modName}': {baseFullPath}");
+
+            string normPath = FindTexture(1, "_norm.tex");
+            string maskPath = FindTexture(2, "_mask.tex");
+
+            var btp = new BackupTexturePaths(baseFullPath, normPath ?? "", maskPath ?? "");
+            btp.ModName = modName;
+            return btp;
         }
 
         public static int DetectRedirectedRace(Guid collectionId, int gender, int mainRace, DragAndDropTexturing.Plugin plugin = null)
