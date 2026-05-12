@@ -16,8 +16,10 @@ using System.Threading.Tasks;
 using Dalamud.IoC;
 using System.Text.RegularExpressions;
 using System.IO;
+using FFXIVLooseTextureCompiler;
 using FFXIVLooseTextureCompiler.Export;
 using FFXIVLooseTextureCompiler.Racial;
+using LooseTextureCompilerCore;
 
 namespace PenumbraAndGlamourerHelpers
 {
@@ -264,7 +266,7 @@ namespace PenumbraAndGlamourerHelpers
                     }
 
                     Dictionary<string, string> files = GetFilesForMod(modDirectoryPath, mod.Dir, mod.Settings);
-                    
+
                     // Count paths per body type — the dominant type has more paths
                     int biboCount = 0, gen3Count = 0, tbseCount = 0;
                     foreach (var key in files.Keys)
@@ -416,7 +418,16 @@ namespace PenumbraAndGlamourerHelpers
                 foreach (var mod in activeMods)
                 {
                     Dictionary<string, string> files = GetFilesForMod(modDirectoryPath, mod.Dir, mod.Settings);
-                    plugin?.PluginLog?.Information($"[Drag And Drop Debug] Checking mod {mod.Name} for compatibility textures (Effective Race: {mainRace})...");
+
+                    // Diagnostic: show what body types this mod contains
+                    int biboKeys = 0, gen3Keys = 0, vanillaKeys = 0;
+                    foreach (var key in files.Keys)
+                    {
+                        if (key.StartsWith("chara/bibo_")) biboKeys++;
+                        if (key.Contains("tfgen3")) gen3Keys++;
+                        if (key.Contains("obj/body") && !key.Contains("tfgen3") && !key.StartsWith("chara/bibo_")) vanillaKeys++;
+                    }
+                    plugin?.PluginLog?.Information($"[Drag And Drop Debug] Checking mod '{mod.Name}' (Priority: {mod.Priority}, Files: {files.Count}, Bibo: {biboKeys}, Gen3: {gen3Keys}, Vanilla: {vanillaKeys}) for Race {mainRace}...");
 
                     // Check Bibo+ (baseBody 1)
                     BackupTexturePaths.BiboOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 1, gender, mainRace, BackupTexturePaths.BiboOverride, plugin);
@@ -432,6 +443,10 @@ namespace PenumbraAndGlamourerHelpers
                     BackupTexturePaths.VanillaLalaOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 6, gender, mainRace, BackupTexturePaths.VanillaLalaOverride, plugin);
                     // Check Relala (baseBody 7)
                     BackupTexturePaths.RelalaOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 7, gender, mainRace, BackupTexturePaths.RelalaOverride, plugin);
+
+                    // After each mod, cross-convert any gaps between Bibo+/Gen3 immediately
+                    // so lower-priority mods can't fill the slot with their own textures
+                    CrossConvertMissingOverrides(plugin);
                 }
                 plugin?.PluginLog?.Information("[Drag And Drop Debug] Omni Overrides population check complete.");
             }
@@ -441,31 +456,171 @@ namespace PenumbraAndGlamourerHelpers
             }
         }
 
+        /// <summary>
+        /// After PopulateOmniOverrides scans all mods, this detects gaps where a high-priority skin mod
+        /// provided one body type (e.g. Bibo+) but not another (e.g. Gen3). It auto-converts using
+        /// FastUVTransfer so the high-priority mod's textures take precedence over lower-priority mods
+        /// that might have native textures for the missing body type.
+        /// </summary>
+        private static void CrossConvertMissingOverrides(DragAndDropTexturing.Plugin plugin)
+        {
+            try
+            {
+                bool hasBibo = BackupTexturePaths.BiboOverride != null && !string.IsNullOrEmpty(BackupTexturePaths.BiboOverride.ModName);
+                bool hasGen3 = BackupTexturePaths.Gen3Override != null && !string.IsNullOrEmpty(BackupTexturePaths.Gen3Override.ModName);
+
+                plugin?.PluginLog?.Information($"[Drag And Drop Debug] CrossConvert check: hasBibo={hasBibo} ('{BackupTexturePaths.BiboOverride?.ModName}'), hasGen3={hasGen3} ('{BackupTexturePaths.Gen3Override?.ModName}')");
+
+                // Nothing to cross-convert if neither or both exist
+                if (hasBibo == hasGen3) return;
+
+                string crossConvertDir = Path.Combine(
+                    GlobalPathStorage.OriginalBaseDirectory ??
+                    Path.Combine(PenumbraAndGlamourerIpcWrapper.Instance.GetModDirectory.Invoke(), "LooseTextureCompilerDLC"),
+                    "cross_convert_cache");
+                Directory.CreateDirectory(crossConvertDir);
+
+                if (hasBibo && !hasGen3)
+                {
+                    // Bibo+ exists, Gen3 is missing → convert Bibo+ to Gen3
+                    plugin?.PluginLog?.Information($"[Drag And Drop Debug] Cross-convert: Bibo+ '{BackupTexturePaths.BiboOverride.ModName}' → Gen3 (auto-generated)");
+
+                    string outBase = Path.Combine(crossConvertDir, BackupTexturePaths.BiboOverride.ModName + Path.GetFileName(BackupTexturePaths.BiboOverride.Base).Replace(".tex",".png"));
+                    FastUVTransfer.BiboToGen3(BackupTexturePaths.BiboOverride.Base, outBase);
+
+                    string outNorm = "";
+                    if (!string.IsNullOrEmpty(BackupTexturePaths.BiboOverride.Normal) && File.Exists(BackupTexturePaths.BiboOverride.Normal))
+                    {
+                        outNorm = Path.Combine(crossConvertDir, BackupTexturePaths.BiboOverride.ModName + Path.GetFileName(BackupTexturePaths.BiboOverride.Normal).Replace(".tex", ".png"));
+                        FastUVTransfer.BiboToGen3(BackupTexturePaths.BiboOverride.Normal, outNorm);
+                    }
+
+                    var btp = new BackupTexturePaths(outBase, outNorm);
+                    btp.ModName = BackupTexturePaths.BiboOverride.ModName + " (Auto-Converted Gen3)";
+                    BackupTexturePaths.Gen3Override = btp;
+
+                    plugin?.PluginLog?.Information($"[Drag And Drop Debug] Cross-convert complete: Gen3 override set from Bibo+ source.");
+                }
+                else if (hasGen3 && !hasBibo)
+                {
+                    // Gen3 exists, Bibo+ is missing → convert Gen3 to Bibo+
+                    plugin?.PluginLog?.Information($"[Drag And Drop Debug] Cross-convert: Gen3 '{BackupTexturePaths.Gen3Override.ModName}' → Bibo+ (auto-generated)");
+
+                    string outBase = Path.Combine(crossConvertDir, BackupTexturePaths.Gen3Override.ModName + Path.GetFileName(BackupTexturePaths.Gen3Override.Base).Replace(".tex", ".png"));
+                    FastUVTransfer.Gen3ToBibo(BackupTexturePaths.Gen3Override.Base, outBase);
+
+                    string outNorm = "";
+                    if (!string.IsNullOrEmpty(BackupTexturePaths.Gen3Override.Normal) && File.Exists(BackupTexturePaths.Gen3Override.Normal))
+                    {
+                        outNorm = Path.Combine(crossConvertDir, BackupTexturePaths.Gen3Override.ModName + Path.GetFileName(BackupTexturePaths.Gen3Override.Normal).Replace(".tex", ".png"));
+                        FastUVTransfer.Gen3ToBibo(BackupTexturePaths.Gen3Override.Normal, outNorm);
+                    }
+
+                    var btp = new BackupTexturePaths(outBase, outNorm);
+                    btp.ModName = BackupTexturePaths.Gen3Override.ModName + " (Auto-Converted Bibo+)";
+                    BackupTexturePaths.BiboOverride = btp;
+
+                    plugin?.PluginLog?.Information($"[Drag And Drop Debug] Cross-convert complete: Bibo+ override set from Gen3 source.");
+                }
+            }
+            catch (Exception ex)
+            {
+                plugin?.PluginLog?.Information($"[Drag And Drop Debug] ERROR in CrossConvertMissingOverrides: {ex.Message}");
+            }
+        }
+
         private static BackupTexturePaths CheckAndSetOverride(Dictionary<string, string> files, string modDir, string subDir, string modName, int baseBody, int gender, int race, BackupTexturePaths overrideField, DragAndDropTexturing.Plugin plugin)
         {
             // Only set if not already found by a higher priority mod
             if (overrideField != null) return overrideField;
 
             string basePath = RacePaths.GetBodyTexturePath(0, gender, baseBody, race, 0).ToLowerInvariant().Replace("\\", "/");
-            if (!string.IsNullOrEmpty(basePath) && files.TryGetValue(basePath, out string baseMatch))
+            string basePathV01 = !string.IsNullOrEmpty(basePath) ? basePath.Replace("/texture/c", "/texture/v01_c").Replace("/texture/tfgen3", "/texture/v01_tfgen3") : "";
+
+            // Try standard path first, then v01 variant
+            string foundBaseMatch = null;
+            if (!string.IsNullOrEmpty(basePath) && files.TryGetValue(basePath, out string m1)) foundBaseMatch = m1;
+            else if (!string.IsNullOrEmpty(basePathV01) && files.TryGetValue(basePathV01, out string m2)) foundBaseMatch = m2;
+
+            // Broader fallback: scan file keys for body-type-specific markers
+            if (foundBaseMatch == null)
             {
-                if (baseMatch.Contains("do_not_edit") || baseMatch.Contains("_generated")) return overrideField;
-                string fullPath = Path.Combine(modDir, subDir, baseMatch.Replace("/", "\\"));
+                string bodyMarker = null;
+                switch (baseBody)
+                {
+                    case 1: bodyMarker = "chara/bibo_"; break;  // Bibo+
+                    case 2: bodyMarker = "tfgen3"; break;        // Gen3
+                }
+
+                if (bodyMarker != null)
+                {
+                    foreach (var key in files.Keys)
+                    {
+                        if (key.Contains(bodyMarker) && key.EndsWith("_base.tex"))
+                        {
+                            foundBaseMatch = files[key];
+                            basePath = key; // Use this as the resolved path for logging
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (foundBaseMatch != null)
+            {
+                if (foundBaseMatch.Contains("do_not_edit") || foundBaseMatch.Contains("_generated")) return overrideField;
+                string fullPath = Path.Combine(modDir, subDir, foundBaseMatch.Replace("/", "\\"));
                 if (File.Exists(fullPath))
                 {
-                    plugin.PluginLog.Information($"[Drag And Drop Debug] Found override base for BodyType {baseBody}: {basePath}");
+                    plugin?.PluginLog?.Information($"[Drag And Drop Debug] Found override base for BodyType {baseBody} in '{modName}': {basePath}");
                     // Found base, now try to find normal
                     string normPath = RacePaths.GetBodyTexturePath(1, gender, baseBody, race, 0).ToLowerInvariant().Replace("\\", "/");
+                    string normPathV01 = !string.IsNullOrEmpty(normPath) ? normPath.Replace("/texture/c", "/texture/v01_c").Replace("/texture/tfgen3", "/texture/v01_tfgen3") : "";
                     string fullNormPath = "";
-                    if (!string.IsNullOrEmpty(normPath) && files.TryGetValue(normPath, out string normMatch))
+
+                    string foundNormMatch = null;
+                    if (!string.IsNullOrEmpty(normPath) && files.TryGetValue(normPath, out string n1)) foundNormMatch = n1;
+                    else if (!string.IsNullOrEmpty(normPathV01) && files.TryGetValue(normPathV01, out string n2)) foundNormMatch = n2;
+
+                    // Broader normal fallback
+                    if (foundNormMatch == null)
                     {
-                        fullNormPath = Path.Combine(modDir, subDir, normMatch.Replace("/", "\\"));
+                        string bodyMarker = null;
+                        switch (baseBody)
+                        {
+                            case 1: bodyMarker = "chara/bibo_"; break;
+                            case 2: bodyMarker = "tfgen3"; break;
+                        }
+                        if (bodyMarker != null)
+                        {
+                            foreach (var key in files.Keys)
+                            {
+                                if (key.Contains(bodyMarker) && key.EndsWith("_norm.tex"))
+                                {
+                                    foundNormMatch = files[key];
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (foundNormMatch != null)
+                    {
+                        fullNormPath = Path.Combine(modDir, subDir, foundNormMatch.Replace("/", "\\"));
                     }
 
                     var btp = new BackupTexturePaths(fullPath, fullNormPath);
                     btp.ModName = modName;
                     return btp;
                 }
+                else
+                {
+                    plugin?.PluginLog?.Information($"[Drag And Drop Debug] Path matched for BodyType {baseBody} in '{modName}' but file not found on disk: {fullPath}");
+                }
+            }
+            else
+            {
+                plugin?.PluginLog?.Information($"[Drag And Drop Debug] No match for BodyType {baseBody} in '{modName}' (tried: {basePath})");
             }
             return overrideField;
         }
