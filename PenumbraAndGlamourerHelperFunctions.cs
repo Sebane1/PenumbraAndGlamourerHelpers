@@ -392,6 +392,15 @@ namespace PenumbraAndGlamourerHelpers
 
         public static void PopulateOmniOverrides(Guid collectionId, int gender, int race, DragAndDropTexturing.Plugin plugin)
         {
+            // Clear prior static values to prevent stale reads
+            FFXIVLooseTextureCompiler.Export.BackupTexturePaths.BiboOverride = null;
+            FFXIVLooseTextureCompiler.Export.BackupTexturePaths.Gen3Override = null;
+            FFXIVLooseTextureCompiler.Export.BackupTexturePaths.Gen2Override = null;
+            FFXIVLooseTextureCompiler.Export.BackupTexturePaths.TbseOverride = null;
+            FFXIVLooseTextureCompiler.Export.BackupTexturePaths.OtopopOverride = null;
+            FFXIVLooseTextureCompiler.Export.BackupTexturePaths.VanillaLalaOverride = null;
+            FFXIVLooseTextureCompiler.Export.BackupTexturePaths.RelalaOverride = null;
+
             if (!BackupTexturePaths.OverrideMode) return;
 
             try
