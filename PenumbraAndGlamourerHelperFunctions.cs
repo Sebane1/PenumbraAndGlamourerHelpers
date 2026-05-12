@@ -551,24 +551,47 @@ namespace PenumbraAndGlamourerHelpers
             if (!string.IsNullOrEmpty(basePath) && files.TryGetValue(basePath, out string m1)) foundBaseMatch = m1;
             else if (!string.IsNullOrEmpty(basePathV01) && files.TryGetValue(basePathV01, out string m2)) foundBaseMatch = m2;
 
-            // Broader fallback: scan file keys for body-type-specific markers
+            // Broader fallback: scan file keys for body-type markers + race identifier
             if (foundBaseMatch == null)
             {
                 string bodyMarker = null;
+                string raceId = null;
                 switch (baseBody)
                 {
-                    case 1: bodyMarker = "chara/bibo_"; break;  // Bibo+
-                    case 2: bodyMarker = "tfgen3"; break;        // Gen3
+                    case 1: // Bibo+
+                        bodyMarker = "chara/bibo_";
+                        // Extract race id from the generated basePath (e.g., "chara/bibo_vieraf_base.tex" -> "viera")
+                        if (!string.IsNullOrEmpty(basePath) && basePath.StartsWith("chara/bibo_"))
+                        {
+                            string afterMarker = basePath.Substring(11); // after "chara/bibo_"
+                            int endIdx = afterMarker.IndexOf('f'); // race ids end before 'f' (feminine suffix)
+                            if (endIdx > 0) raceId = afterMarker.Substring(0, endIdx);
+                        }
+                        break;
+                    case 2: // Gen3
+                        bodyMarker = "tfgen3";
+                        // Extract race id from basePath (e.g., "...tfgen3virf_base.tex" -> "vir")
+                        if (!string.IsNullOrEmpty(basePath))
+                        {
+                            int tfIdx = basePath.IndexOf("tfgen3");
+                            if (tfIdx >= 0)
+                            {
+                                string afterGen3 = basePath.Substring(tfIdx + 6); // after "tfgen3"
+                                int endIdx = afterGen3.IndexOf('f'); // before feminine suffix
+                                if (endIdx > 0) raceId = afterGen3.Substring(0, endIdx);
+                            }
+                        }
+                        break;
                 }
 
-                if (bodyMarker != null)
+                if (bodyMarker != null && !string.IsNullOrEmpty(raceId) && raceId != "invalid")
                 {
                     foreach (var key in files.Keys)
                     {
-                        if (key.Contains(bodyMarker) && key.EndsWith("_base.tex"))
+                        if (key.Contains(bodyMarker) && key.Contains(raceId) && key.EndsWith("_base.tex"))
                         {
                             foundBaseMatch = files[key];
-                            basePath = key; // Use this as the resolved path for logging
+                            basePath = key;
                             break;
                         }
                     }
@@ -591,20 +614,41 @@ namespace PenumbraAndGlamourerHelpers
                     if (!string.IsNullOrEmpty(normPath) && files.TryGetValue(normPath, out string n1)) foundNormMatch = n1;
                     else if (!string.IsNullOrEmpty(normPathV01) && files.TryGetValue(normPathV01, out string n2)) foundNormMatch = n2;
 
-                    // Broader normal fallback
+                    // Broader normal fallback (race-aware)
                     if (foundNormMatch == null)
                     {
-                        string bodyMarker = null;
+                        string bodyMarkerN = null;
+                        string raceIdN = null;
                         switch (baseBody)
                         {
-                            case 1: bodyMarker = "chara/bibo_"; break;
-                            case 2: bodyMarker = "tfgen3"; break;
+                            case 1:
+                                bodyMarkerN = "chara/bibo_";
+                                if (!string.IsNullOrEmpty(normPath) && normPath.StartsWith("chara/bibo_"))
+                                {
+                                    string afterMarker = normPath.Substring(11);
+                                    int endIdx = afterMarker.IndexOf('f');
+                                    if (endIdx > 0) raceIdN = afterMarker.Substring(0, endIdx);
+                                }
+                                break;
+                            case 2:
+                                bodyMarkerN = "tfgen3";
+                                if (!string.IsNullOrEmpty(normPath))
+                                {
+                                    int tfIdx = normPath.IndexOf("tfgen3");
+                                    if (tfIdx >= 0)
+                                    {
+                                        string afterGen3 = normPath.Substring(tfIdx + 6);
+                                        int endIdx = afterGen3.IndexOf('f');
+                                        if (endIdx > 0) raceIdN = afterGen3.Substring(0, endIdx);
+                                    }
+                                }
+                                break;
                         }
-                        if (bodyMarker != null)
+                        if (bodyMarkerN != null && !string.IsNullOrEmpty(raceIdN) && raceIdN != "invalid")
                         {
                             foreach (var key in files.Keys)
                             {
-                                if (key.Contains(bodyMarker) && key.EndsWith("_norm.tex"))
+                                if (key.Contains(bodyMarkerN) && key.Contains(raceIdN) && key.EndsWith("_norm.tex"))
                                 {
                                     foundNormMatch = files[key];
                                     break;
