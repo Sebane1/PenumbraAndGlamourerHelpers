@@ -497,21 +497,38 @@ namespace PenumbraAndGlamourerHelpers
                     // Bibo+ exists, Gen3 is missing → convert Bibo+ to Gen3
                     plugin?.PluginLog?.Information($"[Drag And Drop Debug] Cross-convert: Bibo+ '{BackupTexturePaths.BiboOverride.ModName}' → Gen3 (auto-generated)");
 
-                    string outBase = Path.Combine(crossConvertDir, BackupTexturePaths.BiboOverride.ModName + Path.GetFileName(BackupTexturePaths.BiboOverride.Base).Replace(".tex",".png"));
-                    FastUVTransfer.BiboToGen3(BackupTexturePaths.BiboOverride.Base, outBase);
+                    string outBase = "";
+                    if (!string.IsNullOrEmpty(BackupTexturePaths.BiboOverride.Base) && File.Exists(BackupTexturePaths.BiboOverride.Base))
+                    {
+                        var baseHash = TextureProcessor.CreateHashLocal(BackupTexturePaths.BiboOverride.Base);
+                        outBase = Path.Combine(crossConvertDir, BackupTexturePaths.BiboOverride.ModName + $" {baseHash} " + Path.GetFileName(BackupTexturePaths.BiboOverride.Base).Replace(".tex", ".png"));
+                        if (!File.Exists(outBase))
+                        {
+                            FastUVTransfer.BiboToGen3(BackupTexturePaths.BiboOverride.Base, outBase);
+                        }
+                    }
 
                     string outNorm = "";
                     if (!string.IsNullOrEmpty(BackupTexturePaths.BiboOverride.Normal) && File.Exists(BackupTexturePaths.BiboOverride.Normal))
                     {
-                        outNorm = Path.Combine(crossConvertDir, BackupTexturePaths.BiboOverride.ModName + Path.GetFileName(BackupTexturePaths.BiboOverride.Normal).Replace(".tex", ".png"));
-                        FastUVTransfer.BiboToGen3(BackupTexturePaths.BiboOverride.Normal, outNorm);
+                        var normHash = TextureProcessor.CreateHashLocal(BackupTexturePaths.BiboOverride.Normal);
+                        outNorm = Path.Combine(crossConvertDir, BackupTexturePaths.BiboOverride.ModName + $" {normHash} " + Path.GetFileName(BackupTexturePaths.BiboOverride.Normal).Replace(".tex", ".png"));
+                        if (!File.Exists(outNorm))
+                        {
+                            FastUVTransfer.BiboToGen3(BackupTexturePaths.BiboOverride.Normal, outNorm);
+                        }
                     }
+
 
                     string outMask = "";
                     if (!string.IsNullOrEmpty(BackupTexturePaths.BiboOverride.Mask) && File.Exists(BackupTexturePaths.BiboOverride.Mask))
                     {
-                        outMask = Path.Combine(crossConvertDir, BackupTexturePaths.BiboOverride.ModName + Path.GetFileName(BackupTexturePaths.BiboOverride.Mask).Replace(".tex", ".png"));
-                        FastUVTransfer.BiboToGen3(BackupTexturePaths.BiboOverride.Mask, outMask);
+                        var maskHash = TextureProcessor.CreateHashLocal(BackupTexturePaths.BiboOverride.Mask);
+                        if (!File.Exists(outMask))
+                        {
+                            outMask = Path.Combine(crossConvertDir, BackupTexturePaths.BiboOverride.ModName + $" {maskHash} " + Path.GetFileName(BackupTexturePaths.BiboOverride.Mask).Replace(".tex", ".png"));
+                            FastUVTransfer.BiboToGen3(BackupTexturePaths.BiboOverride.Mask, outMask);
+                        }
                     }
 
                     var btp = new BackupTexturePaths(outBase, outNorm, outMask);
@@ -525,21 +542,40 @@ namespace PenumbraAndGlamourerHelpers
                     // Gen3 exists, Bibo+ is missing → convert Gen3 to Bibo+
                     plugin?.PluginLog?.Information($"[Drag And Drop Debug] Cross-convert: Gen3 '{BackupTexturePaths.Gen3Override.ModName}' → Bibo+ (auto-generated)");
 
-                    string outBase = Path.Combine(crossConvertDir, BackupTexturePaths.Gen3Override.ModName + Path.GetFileName(BackupTexturePaths.Gen3Override.Base).Replace(".tex", ".png"));
-                    FastUVTransfer.Gen3ToBibo(BackupTexturePaths.Gen3Override.Base, outBase);
+                    string outBase = "";
+                    if (!string.IsNullOrEmpty(BackupTexturePaths.Gen3Override.Base) && File.Exists(BackupTexturePaths.Gen3Override.Base))
+                    {
+                        var baseHash = TextureProcessor.CreateHashLocal(BackupTexturePaths.BiboOverride.Base);
+                        outBase = Path.Combine(crossConvertDir, BackupTexturePaths.Gen3Override.ModName + $" {baseHash} " + Path.GetFileName(BackupTexturePaths.Gen3Override.Base).Replace(".tex", ".png"));
+                        if (!File.Exists(outBase))
+                        {
+                            FastUVTransfer.Gen3ToBibo(BackupTexturePaths.Gen3Override.Base, outBase);
+                        }
+                    }
 
                     string outNorm = "";
                     if (!string.IsNullOrEmpty(BackupTexturePaths.Gen3Override.Normal) && File.Exists(BackupTexturePaths.Gen3Override.Normal))
                     {
-                        outNorm = Path.Combine(crossConvertDir, BackupTexturePaths.Gen3Override.ModName + Path.GetFileName(BackupTexturePaths.Gen3Override.Normal).Replace(".tex", ".png"));
-                        FastUVTransfer.Gen3ToBibo(BackupTexturePaths.Gen3Override.Normal, outNorm);
+                        var normHash = TextureProcessor.CreateHashLocal(BackupTexturePaths.BiboOverride.Base);
+                        outNorm = Path.Combine(crossConvertDir, BackupTexturePaths.Gen3Override.ModName + $" {normHash} " + Path.GetFileName(BackupTexturePaths.Gen3Override.Normal).Replace(".tex", ".png"));
+                        if (!File.Exists(outNorm))
+                        {
+                            FastUVTransfer.Gen3ToBibo(BackupTexturePaths.Gen3Override.Normal, outNorm);
+                        }
                     }
 
                     string outMask = "";
                     if (!string.IsNullOrEmpty(BackupTexturePaths.Gen3Override.Mask) && File.Exists(BackupTexturePaths.Gen3Override.Mask))
                     {
-                        outMask = Path.Combine(crossConvertDir, BackupTexturePaths.Gen3Override.ModName + Path.GetFileName(BackupTexturePaths.Gen3Override.Mask).Replace(".tex", ".png"));
-                        FastUVTransfer.Gen3ToBibo(BackupTexturePaths.Gen3Override.Mask, outMask);
+                        var maskHash = TextureProcessor.CreateHashLocal(BackupTexturePaths.BiboOverride.Base);
+                        if (!File.Exists(outMask))
+                        {
+                            outMask = Path.Combine(crossConvertDir, BackupTexturePaths.Gen3Override.ModName + $" {maskHash} " + Path.GetFileName(BackupTexturePaths.Gen3Override.Mask).Replace(".tex", ".png"));
+                            if (!File.Exists(outMask))
+                            {
+                                FastUVTransfer.Gen3ToBibo(BackupTexturePaths.Gen3Override.Mask, outMask);
+                            }
+                        }
                     }
 
                     var btp = new BackupTexturePaths(outBase, outNorm, outMask);
@@ -562,9 +598,10 @@ namespace PenumbraAndGlamourerHelpers
                 return overrideField;
 
             // Helper: try to find a texture match in this mod for a given texture type
-            string FindTexture(int textureType, string suffix)
+            string FindTexture(int textureType, string suffix, int overrideBaseBody = -1)
             {
-                string texPath = RacePaths.GetBodyTexturePath(textureType, gender, baseBody, race, 0).ToLowerInvariant().Replace("\\", "/");
+                int targetBaseBody = overrideBaseBody == -1 ? baseBody : overrideBaseBody;
+                string texPath = RacePaths.GetBodyTexturePath(textureType, gender, targetBaseBody, race, 0).ToLowerInvariant().Replace("\\", "/");
                 string texPathV01 = !string.IsNullOrEmpty(texPath) ? texPath.Replace("/texture/c", "/texture/v01_c").Replace("/texture/tfgen3", "/texture/v01_tfgen3") : "";
 
                 string match = null;
@@ -576,14 +613,14 @@ namespace PenumbraAndGlamourerHelpers
                 {
                     string bodyMarker = null;
                     string raceId = null;
-                    switch (baseBody)
+                    switch (targetBaseBody)
                     {
                         case 1: // Bibo+
                             bodyMarker = "chara/bibo_";
                             if (!string.IsNullOrEmpty(texPath) && texPath.StartsWith("chara/bibo_"))
                             {
                                 string afterMarker = texPath.Substring(11);
-                                int endIdx = afterMarker.IndexOf('f');
+                                int endIdx = afterMarker.IndexOf('_');
                                 if (endIdx > 0) raceId = afterMarker.Substring(0, endIdx);
                             }
                             break;
@@ -626,7 +663,7 @@ namespace PenumbraAndGlamourerHelpers
                 bool filled = false;
                 if (overrideField.NeedsNormal)
                 {
-                    string normFullPath = FindTexture(1, "_norm.tex");
+                    string normFullPath = FindTexture(1, "_norm.tex") ?? FindTexture(1, "_norm.tex", 0);
                     if (normFullPath != null)
                     {
                         overrideField.FillNormal(normFullPath);
@@ -636,7 +673,7 @@ namespace PenumbraAndGlamourerHelpers
                 }
                 if (overrideField.NeedsMask)
                 {
-                    string maskFullPath = FindTexture(2, "_mask.tex");
+                    string maskFullPath = FindTexture(2, "_mask.tex") ?? FindTexture(2, "_mask.tex", 0);
                     if (maskFullPath != null)
                     {
                         overrideField.FillMask(maskFullPath);
@@ -666,8 +703,8 @@ namespace PenumbraAndGlamourerHelpers
 
             plugin?.PluginLog?.Information($"[Drag And Drop Debug] Found override base for BodyType {baseBody} in '{modName}': {baseFullPath}");
 
-            string normPath = FindTexture(1, "_norm.tex");
-            string maskPath = FindTexture(2, "_mask.tex");
+            string normPath = FindTexture(1, "_norm.tex") ?? FindTexture(1, "_norm.tex", 0);
+            string maskPath = FindTexture(2, "_mask.tex") ?? FindTexture(2, "_mask.tex", 0);
 
             var btp = new BackupTexturePaths(baseFullPath, normPath ?? "", maskPath ?? "");
             btp.ModName = modName;
