@@ -1,4 +1,4 @@
-﻿using Dalamud.Game.ClientState.Objects.Enums;
+using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Logging;
 using Dalamud.Plugin.Services;
@@ -267,6 +267,18 @@ namespace PenumbraAndGlamourerHelpers
 
                     Dictionary<string, string> files = GetFilesForMod(modDirectoryPath, mod.Dir, mod.Settings);
 
+                    // Early hard-match: if the mod name or dir explicitly identifies a Gen3 variant body, return immediately.
+                    // These body mods use standard chara/equipment paths so file-path counting alone won't detect them.
+                    if (gender != 0)
+                    {
+                        if (lnm.Contains("pythia") || lnm.Contains("exqb") || lnm.Contains("gaia") || ldr.Contains("pythia") || ldr.Contains("exqb") || ldr.Contains("gaia"))
+                        {
+                            detectedModName = mod.Name;
+                            plugin?.PluginLog?.Information($"[Drag And Drop Debug] Gen3 variant hard-detected via mod name: '{mod.Name}'");
+                            return 2;
+                        }
+                    }
+
                     // Count paths per body type — the dominant type has more paths
                     int biboCount = 0, gen3Count = 0, tbseCount = 0;
                     foreach (var key in files.Keys)
@@ -294,7 +306,7 @@ namespace PenumbraAndGlamourerHelpers
                         // Multiple body types — check name first, then use whichever has more paths
                         detectedModName = mod.Name;
                         plugin?.PluginLog?.Information($"[Drag And Drop Debug] Multiple body types in '{mod.Name}' (bibo={biboCount}, gen3={gen3Count}, tbse={tbseCount}). Checking name...");
-                        if (gender != 0) { if (lnm.Contains("bibo") || lnm.Contains("yab") || lnm.Contains("b+") || ldr.Contains("bibo")) return 1; if (lnm.Contains("gen3") || lnm.Contains("tight & firm") || lnm.Contains("eve") || ldr.Contains("gen3")) return 2; } if (gender != 1) { if (lnm.Contains("tbse") || ldr.Contains("tbse")) return 3; }
+                        if (gender != 0) { if (lnm.Contains("bibo") || lnm.Contains("yab") || lnm.Contains("b+") || ldr.Contains("bibo")) return 1; if (lnm.Contains("gen3") || lnm.Contains("tight & firm") || lnm.Contains("eve") || lnm.Contains("exqb") || lnm.Contains("pythia") || lnm.Contains("gaia") || ldr.Contains("gen3") || ldr.Contains("exqb") || ldr.Contains("pythia") || ldr.Contains("gaia")) return 2; } if (gender != 1) { if (lnm.Contains("tbse") || ldr.Contains("tbse")) return 3; }
                         // Name didn't help — the type with the most paths is the primary one
                         int max = Math.Max(biboCount, Math.Max(gen3Count, tbseCount));
                         int dominant = gen3Count == max ? 2 : biboCount == max ? 1 : 3;
@@ -306,7 +318,7 @@ namespace PenumbraAndGlamourerHelpers
                         // No body paths found — check mod name/dir as last resort
                         if (gender != 0) {
                             if (lnm.Contains("bibo") || lnm.Contains("yab") || lnm.Contains("b+") || ldr.Contains("bibo")) { detectedModName = mod.Name; plugin?.PluginLog?.Information($"[Drag And Drop Debug] Body detected via name: '{mod.Name}' -> Bibo"); return 1; }
-                            if (lnm.Contains("gen3") || lnm.Contains("tight & firm") || ldr.Contains("gen3")) { detectedModName = mod.Name; plugin?.PluginLog?.Information($"[Drag And Drop Debug] Body detected via name: '{mod.Name}' -> Gen3"); return 2; }
+                            if (lnm.Contains("gen3") || lnm.Contains("tight & firm") || lnm.Contains("eve") || lnm.Contains("exqb") || lnm.Contains("pythia") || lnm.Contains("gaia") || ldr.Contains("gen3") || ldr.Contains("exqb") || ldr.Contains("pythia") || ldr.Contains("gaia")) { detectedModName = mod.Name; plugin?.PluginLog?.Information($"[Drag And Drop Debug] Body detected via name: '{mod.Name}' -> Gen3"); return 2; }
                         }
                         if (gender != 1) {
                             if (lnm.Contains("tbse") || ldr.Contains("tbse")) { detectedModName = mod.Name; plugin?.PluginLog?.Information($"[Drag And Drop Debug] Body detected via name: '{mod.Name}' -> TBSE"); return 3; }
