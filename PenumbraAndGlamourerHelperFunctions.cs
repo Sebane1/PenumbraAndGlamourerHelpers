@@ -230,18 +230,29 @@ namespace PenumbraAndGlamourerHelpers
             var mods = PenumbraAndGlamourerIpcWrapper.Instance.GetModList.Invoke();
             List<(string Name, string Dir, int Priority, Dictionary<string, List<string>> Settings)> activeMods = new List<(string Name, string Dir, int Priority, Dictionary<string, List<string>> Settings)>();
 
+            int totalChecked = 0, inheritedCount = 0, directCount = 0;
             foreach (var mod in mods)
             {
                 string lowerKey = mod.Key.ToLower();
                 string lowerValue = mod.Value.ToLower();
                 if (lowerValue.Contains("drag and drop") || lowerKey.Contains("drag and drop") || lowerValue.Contains("loosetexturecompilerdlc") || lowerKey.Contains("loosetexturecompilerdlc")) continue;
 
+                totalChecked++;
                 var settings = PenumbraAndGlamourerIpcWrapper.Instance.GetCurrentModSettings.Invoke(collectionId, mod.Key, mod.Value, true);
                 if (settings.Item1 == Penumbra.Api.Enums.PenumbraApiEc.Success && settings.Item2.HasValue && settings.Item2.Value.Item1 == true)
+                {
+                    // Also check non-inherited to distinguish direct vs. inherited mods
+                    var directSettings = PenumbraAndGlamourerIpcWrapper.Instance.GetCurrentModSettings.Invoke(collectionId, mod.Key, mod.Value, false);
+                    bool isDirect = directSettings.Item1 == Penumbra.Api.Enums.PenumbraApiEc.Success && directSettings.Item2.HasValue && directSettings.Item2.Value.Item1 == true;
+                    if (isDirect) directCount++;
+                    else inheritedCount++;
+
                     activeMods.Add((mod.Value, mod.Key, settings.Item2.Value.Item2, settings.Item2.Value.Item3));
+                }
             }
 
             activeMods.Sort((a, b) => b.Priority.CompareTo(a.Priority));
+            DragAndDropTexturing.Plugin.Log?.Information($"[Drag And Drop Debug] GetActiveMods: Collection={collectionId}, {totalChecked} mods checked, {directCount} direct, {inheritedCount} inherited, {activeMods.Count} active total");
             return activeMods;
         }
 

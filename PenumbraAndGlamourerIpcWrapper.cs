@@ -100,7 +100,7 @@ public class PenumbraAndGlamourerIpcWrapper : IDisposable
 
     private void ModSettingChangedDelegate(Penumbra.Api.Enums.ModSettingChange type, Guid collectionId, string modDir, bool inherited)
     {
-        OnModSettingChanged?.Invoke(this, new ModSettingChangedEventArgs(modDir));
+        OnModSettingChanged?.Invoke(this, new ModSettingChangedEventArgs(modDir, type, collectionId, inherited));
     }
 
     private void GlamourerStateChangedDelegate(nint gameObjectPtr)
@@ -127,5 +127,14 @@ public class GlamourerStateChangedEventArgs : EventArgs
 public class ModSettingChangedEventArgs : EventArgs
 {
     public string ModDirectory { get; }
-    public ModSettingChangedEventArgs(string modDir) { ModDirectory = modDir; }
+    public Penumbra.Api.Enums.ModSettingChange ChangeType { get; }
+    public Guid CollectionId { get; }
+    public bool Inherited { get; }
+    public ModSettingChangedEventArgs(string modDir, Penumbra.Api.Enums.ModSettingChange changeType = default, Guid collectionId = default, bool inherited = false)
+    {
+        ModDirectory = modDir;
+        ChangeType = changeType;
+        CollectionId = collectionId;
+        Inherited = inherited;
+    }
 }
