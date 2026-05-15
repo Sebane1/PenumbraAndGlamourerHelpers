@@ -549,6 +549,7 @@ namespace PenumbraAndGlamourerHelpers
                     }
 
                     var btp = new BackupTexturePaths(outBase, outNorm, outMask);
+                    btp.FillsMissingTextures = true;
                     btp.ModName = BackupTexturePaths.BiboOverride.ModName + " (Auto-Converted Gen3)";
                     BackupTexturePaths.Gen3Override = btp;
 
@@ -597,6 +598,7 @@ namespace PenumbraAndGlamourerHelpers
 
                     var btp = new BackupTexturePaths(outBase, outNorm, outMask);
                     btp.ModName = BackupTexturePaths.Gen3Override.ModName + " (Auto-Converted Bibo+)";
+                    btp.FillsMissingTextures = true;
                     BackupTexturePaths.BiboOverride = btp;
 
                     plugin?.PluginLog?.Information($"[Drag And Drop Debug] Cross-convert complete: Bibo+ override set from Gen3 source.");
