@@ -279,7 +279,7 @@ namespace PenumbraAndGlamourerHelpers
                         }
                     }
 
-                    // Count paths per body type — the dominant type has more paths
+                    // Count paths per body type â?" the dominant type has more paths
                     int biboCount = 0, gen3Count = 0, tbseCount = 0;
                     foreach (var key in files.Keys)
                     {
@@ -303,11 +303,11 @@ namespace PenumbraAndGlamourerHelpers
                     }
                     else if (bodyTypeCount > 1)
                     {
-                        // Multiple body types — check name first, then use whichever has more paths
+                        // Multiple body types â?" check name first, then use whichever has more paths
                         detectedModName = mod.Name;
                         plugin?.PluginLog?.Information($"[Drag And Drop Debug] Multiple body types in '{mod.Name}' (bibo={biboCount}, gen3={gen3Count}, tbse={tbseCount}). Checking name...");
                         if (gender != 0) { if (lnm.Contains("bibo") || lnm.Contains("yab") || lnm.Contains("b+") || ldr.Contains("bibo")) return 1; if (lnm.Contains("gen3") || lnm.Contains("tight & firm") || System.Text.RegularExpressions.Regex.IsMatch(lnm, @"(^|[^a-z])eve([^a-z]|$)") || lnm.Contains("exqb") || lnm.Contains("pythia") || lnm.Contains("gaia") || ldr.Contains("gen3") || ldr.Contains("exqb") || ldr.Contains("pythia") || ldr.Contains("gaia")) return 2; } if (gender != 1) { if (lnm.Contains("tbse") || ldr.Contains("tbse")) return 3; }
-                        // Name didn't help — the type with the most paths is the primary one
+                        // Name didn't help â?" the type with the most paths is the primary one
                         int max = Math.Max(biboCount, Math.Max(gen3Count, tbseCount));
                         int dominant = gen3Count == max ? 2 : biboCount == max ? 1 : 3;
                         plugin?.PluginLog?.Information($"[Drag And Drop Debug] Name inconclusive. Dominant path count wins: type {dominant}");
@@ -315,7 +315,7 @@ namespace PenumbraAndGlamourerHelpers
                     }
                     else
                     {
-                        // No body paths found — check mod name/dir as last resort
+                        // No body paths found â?" check mod name/dir as last resort
                         if (gender != 0) {
                             if (lnm.Contains("bibo") || lnm.Contains("yab") || lnm.Contains("b+") || ldr.Contains("bibo")) { detectedModName = mod.Name; plugin?.PluginLog?.Information($"[Drag And Drop Debug] Body detected via name: '{mod.Name}' -> Bibo"); return 1; }
                             if (lnm.Contains("gen3") || lnm.Contains("tight & firm") || System.Text.RegularExpressions.Regex.IsMatch(lnm, @"(^|[^a-z])eve([^a-z]|$)") || lnm.Contains("exqb") || lnm.Contains("pythia") || lnm.Contains("gaia") || ldr.Contains("gen3") || ldr.Contains("exqb") || ldr.Contains("pythia") || ldr.Contains("gaia")) { detectedModName = mod.Name; plugin?.PluginLog?.Information($"[Drag And Drop Debug] Body detected via name: '{mod.Name}' -> Gen3"); return 2; }
@@ -347,7 +347,7 @@ namespace PenumbraAndGlamourerHelpers
                 List<(string Name, string Dir, int Priority, Dictionary<string, List<string>> Settings)> activeMods = new List<(string Name, string Dir, int Priority, Dictionary<string, List<string>> Settings)>();
                 foreach (var mod in mods)
                 {
-                    // SKIP OUR OWN MODS — our generated mods always end with "Texture Body/Face/Eyes/Eyebrows"
+                    // SKIP OUR OWN MODS â?" our generated mods always end with "Texture Body/Face/Eyes/Eyebrows"
                     string modNameLower = mod.Value.ToLower();
                     string modDirLower = mod.Key.ToLower();
                     if (modNameLower.Contains("drag and drop") || modDirLower.Contains("drag and drop") ||
@@ -511,8 +511,8 @@ namespace PenumbraAndGlamourerHelpers
 
                 if (hasBibo && !hasGen3)
                 {
-                    // Bibo+ exists, Gen3 is missing → convert Bibo+ to Gen3
-                    plugin?.PluginLog?.Information($"[Drag And Drop Debug] Cross-convert: Bibo+ '{BackupTexturePaths.BiboOverride.ModName}' → Gen3 (auto-generated)");
+                    // Bibo+ exists, Gen3 is missing â+' convert Bibo+ to Gen3
+                    plugin?.PluginLog?.Information($"[Drag And Drop Debug] Cross-convert: Bibo+ '{BackupTexturePaths.BiboOverride.ModName}' â+' Gen3 (auto-generated)");
 
                     string outBase = "";
                     if (!string.IsNullOrEmpty(BackupTexturePaths.BiboOverride.Base) && File.Exists(BackupTexturePaths.BiboOverride.Base))
@@ -557,8 +557,8 @@ namespace PenumbraAndGlamourerHelpers
                 }
                 else if (hasGen3 && !hasBibo)
                 {
-                    // Gen3 exists, Bibo+ is missing → convert Gen3 to Bibo+
-                    plugin?.PluginLog?.Information($"[Drag And Drop Debug] Cross-convert: Gen3 '{BackupTexturePaths.Gen3Override.ModName}' → Bibo+ (auto-generated)");
+                    // Gen3 exists, Bibo+ is missing â+' convert Gen3 to Bibo+
+                    plugin?.PluginLog?.Information($"[Drag And Drop Debug] Cross-convert: Gen3 '{BackupTexturePaths.Gen3Override.ModName}' â+' Bibo+ (auto-generated)");
 
                     string outBase = "";
                     if (!string.IsNullOrEmpty(BackupTexturePaths.Gen3Override.Base) && File.Exists(BackupTexturePaths.Gen3Override.Base))
@@ -676,7 +676,7 @@ namespace PenumbraAndGlamourerHelpers
                 return File.Exists(fullPath) ? fullPath : null;
             }
 
-            // --- Case 1: Override already exists but has gaps in normal/mask ---
+            // Case 1: Override already exists but has gaps in normal/mask
             if (overrideField != null)
             {
                 bool filled = false;
@@ -703,7 +703,7 @@ namespace PenumbraAndGlamourerHelpers
                 return overrideField;
             }
 
-            // --- Case 2: No override yet — try to claim the slot with a base texture ---
+            // Case 2: No override yet, try to claim the slot with a base texture
             string baseFullPath = FindTexture(0, "_base.tex");
             if (baseFullPath == null)
             {
@@ -766,6 +766,17 @@ namespace PenumbraAndGlamourerHelpers
             return -1;
         }
 
+        // Extensions we care about â€” skip everything else (audio, animation, VFX, etc.)
+        private static readonly HashSet<string> _relevantExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            { ".mtrl", ".tex", ".mdl" };
+
+        private static bool IsRelevantGamePath(string key)
+        {
+            int dotIdx = key.LastIndexOf('.');
+            if (dotIdx < 0) return false;
+            return _relevantExtensions.Contains(key.Substring(dotIdx));
+        }
+
         private static Dictionary<string, string> GetFilesForMod(string modDirectory, string modDir, Dictionary<string, List<string>> settings)
         {
             Dictionary<string, string> files = new Dictionary<string, string>();
@@ -777,11 +788,21 @@ namespace PenumbraAndGlamourerHelpers
             {
                 try
                 {
-                    var modData = JsonConvert.DeserializeObject<PenumbraModData>(File.ReadAllText(defaultJson));
+                    string rawJson = File.ReadAllText(defaultJson);
+
+                    // If this mod contains any non-texture file types, skip it entirely
+                    if (rawJson.Contains(".scd") || rawJson.Contains(".pap") || rawJson.Contains(".vfx") || rawJson.Contains(".avfx") || rawJson.Contains(".tmb") || rawJson.Contains(".sklb") || rawJson.Contains(".shpk"))
+                        return files;
+
+                    var modData = JsonConvert.DeserializeObject<PenumbraModData>(rawJson);
                     if (modData?.Files != null)
                     {
                         foreach (var kvp in modData.Files)
-                            files[kvp.Key.ToLowerInvariant().Replace("\\", "/")] = kvp.Value;
+                        {
+                            string normalizedKey = kvp.Key.ToLowerInvariant().Replace("\\", "/");
+                            if (IsRelevantGamePath(normalizedKey))
+                                files[normalizedKey] = kvp.Value;
+                        }
                     }
                 }
                 catch { }
@@ -802,7 +823,11 @@ namespace PenumbraAndGlamourerHelpers
                                 if (activeOptions.Contains(option.Name) && option.Files != null)
                                 {
                                     foreach (var kvp in option.Files)
-                                        files[kvp.Key.ToLowerInvariant().Replace("\\", "/")] = kvp.Value;
+                                    {
+                                        string normalizedKey = kvp.Key.ToLowerInvariant().Replace("\\", "/");
+                                        if (IsRelevantGamePath(normalizedKey))
+                                            files[normalizedKey] = kvp.Value;
+                                    }
                                 }
                             }
                         }
@@ -847,6 +872,19 @@ namespace PenumbraAndGlamourerHelpers
                     bool matchesKeyword = !string.IsNullOrEmpty(targetKeyword) && mod.Value.ToLower().Contains(targetKeyword);
                     string modPath = Path.Combine(modDir, mod.Key);
                     bool foundInThisMod = false;
+
+                    // Quick-skip mods that contain audio/animation/VFX files — not our domain
+                    string quickCheckJson = Path.Combine(modPath, "default_mod.json");
+                    if (File.Exists(quickCheckJson))
+                    {
+                        try
+                        {
+                            string rawJson = File.ReadAllText(quickCheckJson);
+                            bool hasIrrelevant = rawJson.Contains(".scd") || rawJson.Contains(".pap") || rawJson.Contains(".vfx") || rawJson.Contains(".avfx") || rawJson.Contains(".tmb") || rawJson.Contains(".sklb") || rawJson.Contains(".shpk");
+                            if (hasIrrelevant) continue;
+                        }
+                        catch { }
+                    }
                     
                     // Try direct file first
                     string directPath = Path.Combine(modPath, targetGamePath.Replace("/", "\\"));
@@ -934,5 +972,3 @@ namespace PenumbraAndGlamourerHelpers
         }
     }
 }
-
-
