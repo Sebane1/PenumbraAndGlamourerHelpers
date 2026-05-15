@@ -823,6 +823,113 @@ namespace PenumbraAndGlamourerHelpers
             public string Name { get; set; }
             public Dictionary<string, string> Files { get; set; }
         }
+
+        public static string FindMeshDiskPathInModDirectory(string targetKeyword, string targetGamePath)
+        {
+            var list = FindAllMeshDiskPathsInModDirectory(targetKeyword, targetGamePath);
+            return list.Count > 0 ? list[0].DiskPath : null;
+        }
+
+        public static List<(string ModName, string DiskPath)> FindAllMeshDiskPathsInModDirectory(string targetKeyword, string targetGamePath)
+        {
+            var priorityResults = new List<(string ModName, string DiskPath)>();
+            var otherResults = new List<(string ModName, string DiskPath)>();
+            try
+            {
+                var mods = PenumbraAndGlamourerIpcWrapper.Instance.GetModList.Invoke();
+                string modDir = PenumbraAndGlamourerIpcWrapper.Instance.GetModDirectory.Invoke();
+                targetGamePath = targetGamePath.ToLowerInvariant().Replace("\\", "/");
+
+                foreach (var mod in mods)
+                {
+                    bool matchesKeyword = !string.IsNullOrEmpty(targetKeyword) && mod.Value.ToLower().Contains(targetKeyword);
+                    string modPath = Path.Combine(modDir, mod.Key);
+                    bool foundInThisMod = false;
+                    
+                    // Try direct file first
+                    string directPath = Path.Combine(modPath, targetGamePath.Replace("/", "\\"));
+                    if (File.Exists(directPath))
+                    {
+                        if (matchesKeyword) priorityResults.Add((mod.Value, directPath));
+                        else otherResults.Add((mod.Value, directPath));
+                        continue; // skip JSON checks if direct file is found
+                    }
+
+                    // Check default_mod.json
+                    string defaultJson = Path.Combine(modPath, "default_mod.json");
+                    if (File.Exists(defaultJson))
+                    {
+                        try
+                        {
+                            string jsonText = File.ReadAllText(defaultJson);
+                            if (jsonText.Contains(targetGamePath))
+                            {
+                                var modData = JsonConvert.DeserializeObject<PenumbraModData>(jsonText);
+                                if (modData?.Files != null)
+                                {
+                                    foreach (var kvp in modData.Files)
+                                    {
+                                        if (kvp.Key.ToLowerInvariant().Replace("\\", "/") == targetGamePath)
+                                        {
+                                            string mappedPath = Path.Combine(modPath, kvp.Value.Replace("/", "\\"));
+                                            if (File.Exists(mappedPath))
+                                            {
+                                                if (matchesKeyword) priorityResults.Add(($"{mod.Value} (Default)", mappedPath));
+                                                else otherResults.Add(($"{mod.Value} (Default)", mappedPath));
+                                                foundInThisMod = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        catch { }
+                    }
+
+                    // Check all group JSONs
+                    if (Directory.Exists(modPath))
+                    {
+                        foreach (var groupFile in Directory.GetFiles(modPath, "group_*.json"))
+                        {
+                            try
+                            {
+                                string groupText = File.ReadAllText(groupFile);
+                                if (groupText.Contains(targetGamePath))
+                                {
+                                    var groupData = JsonConvert.DeserializeObject<PenumbraGroupData>(groupText);
+                                    if (groupData?.Options != null)
+                                    {
+                                        foreach (var option in groupData.Options)
+                                        {
+                                            if (option.Files != null)
+                                            {
+                                                foreach (var kvp in option.Files)
+                                                {
+                                                    if (kvp.Key.ToLowerInvariant().Replace("\\", "/") == targetGamePath)
+                                                    {
+                                                        string mappedPath = Path.Combine(modPath, kvp.Value.Replace("/", "\\"));
+                                                        if (File.Exists(mappedPath))
+                                                        {
+                                                            if (matchesKeyword) priorityResults.Add(($"{mod.Value} ({groupData.Name}: {option.Name})", mappedPath));
+                                                            else otherResults.Add(($"{mod.Value} ({groupData.Name}: {option.Name})", mappedPath));
+                                                            foundInThisMod = true;
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            catch { }
+                        }
+                    }
+                }
+            }
+            catch { }
+            priorityResults.AddRange(otherResults);
+            return priorityResults;
+        }
     }
 }
 
