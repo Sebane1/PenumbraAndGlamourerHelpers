@@ -338,6 +338,17 @@ namespace PenumbraAndGlamourerHelpers
                 }
             }
             catch (Exception ex) { Log?.Warning(ex, "Failed to detect base body from Penumbra"); }
+            
+            if (plugin != null && plugin.Configuration.FallbackBodyType > 0)
+            {
+                int fallback = plugin.Configuration.FallbackBodyType - 1;
+                if (fallback == 4) fallback = 5; // Otopop is 5
+                
+                detectedModName = "Manual Fallback";
+                plugin.PluginLog.Information($"[Drag And Drop Debug] DetectBaseBody: No body mod found, using Manual Fallback BodyType: {fallback}");
+                return fallback;
+            }
+
             plugin?.PluginLog?.Information("[Drag And Drop Debug] DetectBaseBody: No body mod found!");
             return -1;
         }
