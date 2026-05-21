@@ -271,7 +271,7 @@ namespace PenumbraAndGlamourerHelpers
                     // Skip our own generated mods
                     string lnm = mod.Name.ToLower();
                     string ldr = mod.Dir.ToLower();
-                    if (lnm.Contains("texture body") || lnm.Contains("texture face") || lnm.Contains("texture eyes") || lnm.Contains("texture eyebrows") || lnm.Contains("texture mod") || ldr.Contains("do_not_edit"))
+                    if (lnm.Contains("texture body") || lnm.Contains("texture face") || lnm.Contains("texture eyes") || lnm.Contains("texture eyebrows") || lnm.Contains("texture gear") || lnm.Contains("texture mod") || ldr.Contains("do_not_edit") || ldr.Contains("texture gear"))
                     {
                         plugin?.PluginLog?.Information($"[Drag And Drop Debug] Skipping own mod: '{mod.Name}'");
                         continue;
@@ -374,8 +374,9 @@ namespace PenumbraAndGlamourerHelpers
                     string modNameLower = mod.Value.ToLower();
                     string modDirLower = mod.Key.ToLower();
                     if (modNameLower.Contains("drag and drop") || modDirLower.Contains("drag and drop") ||
-                        modNameLower.EndsWith("texture body") || modNameLower.EndsWith("texture face") || modNameLower.EndsWith("texture eyes") ||
-                        modNameLower.EndsWith("texture eyebrows") || modNameLower.EndsWith("texture mod")) continue;
+                        modNameLower.Contains("texture body") || modNameLower.Contains("texture face") || modNameLower.Contains("texture eyes") ||
+                        modNameLower.Contains("texture eyebrows") || modNameLower.Contains("texture gear") || modNameLower.Contains("texture mod") ||
+                        modDirLower.Contains("texture gear")) continue;
 
                     var settings = PenumbraAndGlamourerIpcWrapper.Instance.GetCurrentModSettings.Invoke(collectionId, mod.Key, mod.Value, true);
                     if (settings.Item1 == PenumbraApiEc.Success && settings.Item2.HasValue && settings.Item2.Value.Item1)
@@ -440,8 +441,6 @@ namespace PenumbraAndGlamourerHelpers
             FFXIVLooseTextureCompiler.Export.BackupTexturePaths.VanillaLalaOverride = null;
             FFXIVLooseTextureCompiler.Export.BackupTexturePaths.RelalaOverride = null;
 
-            if (!BackupTexturePaths.OverrideMode) return;
-
             AdvancedOverlayParser.ActiveOverlays.Clear();
 
             try
@@ -456,8 +455,9 @@ namespace PenumbraAndGlamourerHelpers
                     string modNameLower = mod.Value.ToLower();
                     string modDirLower = mod.Key.ToLower();
                     if (modNameLower.Contains("drag and drop") || modDirLower.Contains("drag and drop") ||
-                        modNameLower.EndsWith("texture body") || modNameLower.EndsWith("texture face") || modNameLower.EndsWith("texture eyes") ||
-                        modNameLower.EndsWith("texture eyebrows") || modNameLower.EndsWith("texture mod")) continue;
+                        modNameLower.Contains("texture body") || modNameLower.Contains("texture face") || modNameLower.Contains("texture eyes") ||
+                        modNameLower.Contains("texture eyebrows") || modNameLower.Contains("texture gear") || modNameLower.Contains("texture mod") ||
+                        modDirLower.Contains("texture gear")) continue;
                     var settings = PenumbraAndGlamourerIpcWrapper.Instance.GetCurrentModSettings.Invoke(collectionId, mod.Key, mod.Value, true);
                     if (settings.Item1 == PenumbraApiEc.Success && settings.Item2.HasValue && settings.Item2.Value.Item1)
                     {
@@ -483,20 +483,23 @@ namespace PenumbraAndGlamourerHelpers
                     }
                     plugin?.PluginLog?.Information($"[Drag And Drop Debug] Checking mod '{mod.Name}' (Priority: {mod.Priority}, Files: {files.Count}, Bibo: {biboKeys}, Gen3: {gen3Keys}, Vanilla: {vanillaKeys}) for Race {mainRace}...");
 
-                    // Check Bibo+ (baseBody 1)
-                    BackupTexturePaths.BiboOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 1, gender, mainRace, BackupTexturePaths.BiboOverride, plugin);
-                    // Check Gen3 (baseBody 2)
-                    BackupTexturePaths.Gen3Override = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 2, gender, mainRace, BackupTexturePaths.Gen3Override, plugin);
-                    // Check Vanilla/Gen2 (baseBody 0)
-                    BackupTexturePaths.Gen2Override = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 0, gender, mainRace, BackupTexturePaths.Gen2Override, plugin);
-                    // Check TBSE (baseBody 3)
-                    BackupTexturePaths.TbseOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 3, gender, mainRace, BackupTexturePaths.TbseOverride, plugin);
-                    // Check Otopop (baseBody 5)
-                    BackupTexturePaths.OtopopOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 5, gender, mainRace, BackupTexturePaths.OtopopOverride, plugin);
-                    // Check Asym Lalafell (baseBody 6)
-                    BackupTexturePaths.VanillaLalaOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 6, gender, mainRace, BackupTexturePaths.VanillaLalaOverride, plugin);
-                    // Check Relala (baseBody 7)
-                    BackupTexturePaths.RelalaOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 7, gender, mainRace, BackupTexturePaths.RelalaOverride, plugin);
+                    if (BackupTexturePaths.OverrideMode)
+                    {
+                        // Check Bibo+ (baseBody 1)
+                        BackupTexturePaths.BiboOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 1, gender, mainRace, BackupTexturePaths.BiboOverride, plugin);
+                        // Check Gen3 (baseBody 2)
+                        BackupTexturePaths.Gen3Override = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 2, gender, mainRace, BackupTexturePaths.Gen3Override, plugin);
+                        // Check Vanilla/Gen2 (baseBody 0)
+                        BackupTexturePaths.Gen2Override = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 0, gender, mainRace, BackupTexturePaths.Gen2Override, plugin);
+                        // Check TBSE (baseBody 3)
+                        BackupTexturePaths.TbseOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 3, gender, mainRace, BackupTexturePaths.TbseOverride, plugin);
+                        // Check Otopop (baseBody 5)
+                        BackupTexturePaths.OtopopOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 5, gender, mainRace, BackupTexturePaths.OtopopOverride, plugin);
+                        // Check Asym Lalafell (baseBody 6)
+                        BackupTexturePaths.VanillaLalaOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 6, gender, mainRace, BackupTexturePaths.VanillaLalaOverride, plugin);
+                        // Check Relala (baseBody 7)
+                        BackupTexturePaths.RelalaOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 7, gender, mainRace, BackupTexturePaths.RelalaOverride, plugin);
+                    }
 
                     // Scan for Advanced Overlays (Generic Metadata Format)
                     string modRoot = Path.Combine(modDirectoryPath, mod.Dir);
@@ -636,9 +639,12 @@ namespace PenumbraAndGlamourerHelpers
                         }
                     }
 
-                    // After each mod, cross-convert any gaps between Bibo+/Gen3 immediately
-                    // so lower-priority mods can't fill the slot with their own textures
-                    CrossConvertMissingOverrides(plugin);
+                    if (BackupTexturePaths.OverrideMode)
+                    {
+                        // After each mod, cross-convert any gaps between Bibo+/Gen3 immediately
+                        // so lower-priority mods can't fill the slot with their own textures
+                        CrossConvertMissingOverrides(plugin);
+                    }
                 }
                 plugin?.PluginLog?.Information("[Drag And Drop Debug] Omni Overrides population check complete.");
             }
@@ -845,7 +851,7 @@ namespace PenumbraAndGlamourerHelpers
                 bool filled = false;
                 if (overrideField.NeedsNormal)
                 {
-                    string normFullPath = FindTexture(1, "_norm.tex") ?? FindTexture(1, "_norm.tex", 0);
+                    string normFullPath = FindTexture(1, "_norm.tex") ?? FindTexture(1, "_n.tex") ?? FindTexture(1, "_norm.tex", 0) ?? FindTexture(1, "_n.tex", 0);
                     if (normFullPath != null)
                     {
                         overrideField.FillNormal(normFullPath);
@@ -855,7 +861,7 @@ namespace PenumbraAndGlamourerHelpers
                 }
                 if (overrideField.NeedsMask)
                 {
-                    string maskFullPath = FindTexture(2, "_mask.tex") ?? FindTexture(2, "_mask.tex", 0);
+                    string maskFullPath = FindTexture(2, "_mask.tex") ?? FindTexture(2, "_m.tex") ?? FindTexture(2, "_s.tex") ?? FindTexture(2, "_mask.tex", 0) ?? FindTexture(2, "_m.tex", 0) ?? FindTexture(2, "_s.tex", 0);
                     if (maskFullPath != null)
                     {
                         overrideField.FillMask(maskFullPath);
@@ -867,13 +873,7 @@ namespace PenumbraAndGlamourerHelpers
             }
 
             // Case 2: No override yet, try to claim the slot with a base texture
-            string baseFullPath = FindTexture(0, "_base.tex");
-            if (baseFullPath == null)
-            {
-                // Also try non-verbose suffixes for vanilla body types
-                if (baseBody == 0 || baseBody == 3)
-                    baseFullPath = FindTexture(0, "_d.tex");
-            }
+            string baseFullPath = FindTexture(0, "_base.tex") ?? FindTexture(0, "_d.tex") ?? FindTexture(0, "_diff.tex");
 
             if (baseFullPath == null)
             {
@@ -881,12 +881,10 @@ namespace PenumbraAndGlamourerHelpers
                 return overrideField;
             }
 
-
-
             plugin?.PluginLog?.Information($"[Drag And Drop Debug] Found override base for BodyType {baseBody} in '{modName}': {baseFullPath}");
 
-            string normPath = FindTexture(1, "_norm.tex") ?? FindTexture(1, "_norm.tex", 0);
-            string maskPath = FindTexture(2, "_mask.tex") ?? FindTexture(2, "_mask.tex", 0);
+            string normPath = FindTexture(1, "_norm.tex") ?? FindTexture(1, "_n.tex") ?? FindTexture(1, "_norm.tex", 0) ?? FindTexture(1, "_n.tex", 0);
+            string maskPath = FindTexture(2, "_mask.tex") ?? FindTexture(2, "_m.tex") ?? FindTexture(2, "_s.tex") ?? FindTexture(2, "_mask.tex", 0) ?? FindTexture(2, "_m.tex", 0) ?? FindTexture(2, "_s.tex", 0);
 
             var btp = new BackupTexturePaths(baseFullPath, normPath ?? "", maskPath ?? "");
             btp.ModName = modName;
