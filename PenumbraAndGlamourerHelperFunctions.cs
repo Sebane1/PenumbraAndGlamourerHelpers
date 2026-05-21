@@ -526,13 +526,70 @@ namespace PenumbraAndGlamourerHelpers
                         {
                             foreach (var group in advancedMod.OptionGroups)
                             {
-                                plugin?.PluginLog?.Information($"[Drag And Drop Debug] Group: '{group.PenumbraGroupName}'. Active in Penumbra? {mod.Settings.TryGetValue(group.PenumbraGroupName, out var activeOptions)}");
-                                if (mod.Settings.TryGetValue(group.PenumbraGroupName, out activeOptions))
+                                var activeOptionsPair = mod.Settings.FirstOrDefault(s => s.Key.Equals(group.PenumbraGroupName, StringComparison.OrdinalIgnoreCase));
+                                var activeOptions = activeOptionsPair.Value;
+                                if (activeOptions == null)
+                                {
+                                    long defaultSettings = 0;
+                                    string groupType = "Single";
+                                    try
+                                    {
+                                        if (Directory.Exists(modRoot))
+                                        {
+                                            foreach (var groupFile in Directory.GetFiles(modRoot, "group_*.json"))
+                                            {
+                                                var groupData = JsonConvert.DeserializeObject<PenumbraGroupData>(File.ReadAllText(groupFile));
+                                                if (groupData != null && groupData.Name.Equals(group.PenumbraGroupName, StringComparison.OrdinalIgnoreCase))
+                                                {
+                                                    defaultSettings = groupData.DefaultSettings;
+                                                    groupType = groupData.Type;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    catch { }
+
+                                    activeOptions = new List<string>();
+                                    if (groupType != null && groupType.Equals("Multi", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        for (int i = 0; i < group.Options.Count; i++)
+                                        {
+                                            if ((defaultSettings & (1L << i)) != 0)
+                                            {
+                                                activeOptions.Add(i.ToString());
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        activeOptions.Add(defaultSettings.ToString());
+                                    }
+                                }
+
+                                plugin?.PluginLog?.Information($"[Drag And Drop Debug] Group: '{group.PenumbraGroupName}'. Active in Penumbra? {activeOptions != null}");
+                                if (activeOptions != null)
                                 {
                                     foreach (var option in group.Options)
                                     {
-                                        plugin?.PluginLog?.Information($"[Drag And Drop Debug] - Checking Option: '{option.Name}'. Is Selected? {activeOptions.Contains(option.Name)}");
-                                        if (activeOptions.Contains(option.Name) && option.Overlays != null)
+                                        bool isSelected = activeOptions.Any(o => 
+                                        {
+                                            string trimmedO = o.Trim();
+                                            string trimmedName = option.Name.Trim();
+                                            if (trimmedO.Equals(trimmedName, StringComparison.OrdinalIgnoreCase))
+                                                return true;
+
+                                            if (int.TryParse(trimmedO, out int idx))
+                                            {
+                                                int optionIdx = group.Options.IndexOf(option);
+                                                if (optionIdx == idx)
+                                                    return true;
+                                            }
+                                            return false;
+                                        });
+
+                                        plugin?.PluginLog?.Information($"[Drag And Drop Debug] - Checking Option: '{option.Name}'. Is Selected? {isSelected}");
+                                        if (isSelected && option.Overlays != null)
                                         {
                                             foreach (var overlay in option.Overlays)
                                             {
@@ -922,11 +979,48 @@ namespace PenumbraAndGlamourerHelpers
                     try
                     {
                         var groupData = JsonConvert.DeserializeObject<PenumbraGroupData>(File.ReadAllText(groupFile));
-                        if (groupData != null && settings.TryGetValue(groupData.Name, out var activeOptions))
+                        if (groupData != null)
                         {
+                            var activeOptionsPair = settings.FirstOrDefault(s => s.Key.Equals(groupData.Name, StringComparison.OrdinalIgnoreCase));
+                            var activeOptions = activeOptionsPair.Value;
+                            if (activeOptions == null)
+                            {
+                                activeOptions = new List<string>();
+                                if (groupData.Type != null && groupData.Type.Equals("Multi", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    for (int i = 0; i < groupData.Options.Count; i++)
+                                    {
+                                        if ((groupData.DefaultSettings & (1L << i)) != 0)
+                                        {
+                                            activeOptions.Add(i.ToString());
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    activeOptions.Add(groupData.DefaultSettings.ToString());
+                                }
+                            }
+
                             foreach (var option in groupData.Options)
                             {
-                                if (activeOptions.Contains(option.Name) && option.Files != null)
+                                bool isSelected = activeOptions.Any(o => 
+                                {
+                                    string trimmedO = o.Trim();
+                                    string trimmedName = option.Name.Trim();
+                                    if (trimmedO.Equals(trimmedName, StringComparison.OrdinalIgnoreCase))
+                                        return true;
+
+                                    if (int.TryParse(trimmedO, out int idx))
+                                    {
+                                        int optionIdx = groupData.Options.IndexOf(option);
+                                        if (optionIdx == idx)
+                                            return true;
+                                    }
+                                    return false;
+                                });
+
+                                if (isSelected && option.Files != null)
                                 {
                                     foreach (var kvp in option.Files)
                                     {
@@ -950,6 +1044,8 @@ namespace PenumbraAndGlamourerHelpers
         {
             public string Name { get; set; }
             public List<PenumbraOptionData> Options { get; set; }
+            public long DefaultSettings { get; set; }
+            public string Type { get; set; }
         }
         private class PenumbraOptionData
         {
