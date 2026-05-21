@@ -1,6 +1,7 @@
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Logging;
+using DragAndDropTexturing.Overlays;
 using Dalamud.Plugin.Services;
 using Glamourer.Api.Enums;
 using Newtonsoft.Json;
@@ -441,6 +442,8 @@ namespace PenumbraAndGlamourerHelpers
 
             if (!BackupTexturePaths.OverrideMode) return;
 
+            AdvancedOverlayParser.ActiveOverlays.Clear();
+
             try
             {
                 plugin?.PluginLog?.Information("[Drag And Drop Debug] Populating Omni Overrides...");
@@ -494,6 +497,87 @@ namespace PenumbraAndGlamourerHelpers
                     BackupTexturePaths.VanillaLalaOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 6, gender, mainRace, BackupTexturePaths.VanillaLalaOverride, plugin);
                     // Check Relala (baseBody 7)
                     BackupTexturePaths.RelalaOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 7, gender, mainRace, BackupTexturePaths.RelalaOverride, plugin);
+
+                    // Scan for Advanced Overlays (Generic Metadata Format)
+                    string modRoot = Path.Combine(modDirectoryPath, mod.Dir);
+                    string advancedOverlayJsonPath = Path.Combine(modRoot, "metadata.json");
+                    if (!File.Exists(advancedOverlayJsonPath) && Directory.Exists(modRoot))
+                    {
+                        try
+                        {
+                            foreach (var subDir in Directory.GetDirectories(modRoot))
+                            {
+                                string possiblePath = Path.Combine(subDir, "metadata.json");
+                                if (File.Exists(possiblePath))
+                                {
+                                    advancedOverlayJsonPath = possiblePath;
+                                    break;
+                                }
+                            }
+                        }
+                        catch { }
+                    }
+
+                    if (File.Exists(advancedOverlayJsonPath))
+                    {
+                        plugin?.PluginLog?.Information($"[Drag And Drop Debug] Found Advanced Overlay metadata at: {advancedOverlayJsonPath}");
+                        var advancedMod = AdvancedOverlayParser.Parse(advancedOverlayJsonPath);
+                        if (advancedMod != null && advancedMod.OptionGroups != null)
+                        {
+                            foreach (var group in advancedMod.OptionGroups)
+                            {
+                                plugin?.PluginLog?.Information($"[Drag And Drop Debug] Group: '{group.PenumbraGroupName}'. Active in Penumbra? {mod.Settings.TryGetValue(group.PenumbraGroupName, out var activeOptions)}");
+                                if (mod.Settings.TryGetValue(group.PenumbraGroupName, out activeOptions))
+                                {
+                                    foreach (var option in group.Options)
+                                    {
+                                        plugin?.PluginLog?.Information($"[Drag And Drop Debug] - Checking Option: '{option.Name}'. Is Selected? {activeOptions.Contains(option.Name)}");
+                                        if (activeOptions.Contains(option.Name) && option.Overlays != null)
+                                        {
+                                            foreach (var overlay in option.Overlays)
+                                            {
+                                                string targetPart = "body";
+                                                string uvType = "";
+                                                if (overlay.MaterialGamePath != null)
+                                                {
+                                                    foreach (var path in overlay.MaterialGamePath)
+                                                    {
+                                                        if (path.Contains("/face/")) targetPart = "face";
+                                                        else if (path.Contains("/hair/")) targetPart = "hair";
+                                                        else if (path.Contains("/tail/")) targetPart = "tail";
+
+                                                        if (path.Contains("_bibo")) uvType = "bibo";
+                                                        else if (path.Contains("_gen3") || path.Contains("_eve")) uvType = "gen3";
+                                                        else if (path.Contains("_tbse")) uvType = "tbse";
+                                                        else if (path.Contains("_gen2")) uvType = "gen2";
+                                                    }
+                                                }
+
+                                                string relativePathRoot = Path.GetDirectoryName(advancedOverlayJsonPath);
+                                                string diffPath = !string.IsNullOrEmpty(overlay.Diffuse) ? Path.Combine(relativePathRoot, overlay.Diffuse.Replace("/", "\\")) : null;
+                                                string normPath = !string.IsNullOrEmpty(overlay.Normal) ? Path.Combine(relativePathRoot, overlay.Normal.Replace("/", "\\")) : null;
+                                                string maskPath = !string.IsNullOrEmpty(overlay.Index) ? Path.Combine(relativePathRoot, overlay.Index.Replace("/", "\\")) : null;
+
+                                                plugin?.PluginLog?.Information($"[Drag And Drop Debug]   -> Overlay Paths resolved: Diff='{diffPath}' (Exists: {File.Exists(diffPath)}), Norm='{normPath}' (Exists: {File.Exists(normPath)})");
+
+                                                if (File.Exists(diffPath) || File.Exists(normPath))
+                                                {
+                                                    AdvancedOverlayParser.ActiveOverlays.Add(new ResolvedAdvancedOverlay
+                                                    {
+                                                        TargetBodyPart = targetPart,
+                                                        UVType = uvType,
+                                                        DiffusePath = File.Exists(diffPath) ? diffPath : null,
+                                                        NormalPath = File.Exists(normPath) ? normPath : null,
+                                                        MaskPath = File.Exists(maskPath) ? maskPath : null
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
 
                     // After each mod, cross-convert any gaps between Bibo+/Gen3 immediately
                     // so lower-priority mods can't fill the slot with their own textures
