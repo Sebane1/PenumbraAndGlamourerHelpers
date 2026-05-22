@@ -16,6 +16,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
 
         public long ItemId { get; set; }
         public int Stain { get; set; }
+        public int Stain2 { get; set; }
         public bool Crest { get; set; }
         public bool Apply { get; set; } = true;
         public bool ApplyStain { get; set; }
@@ -139,6 +140,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
 
         public long ItemId { get; set; }
         public int Stain { get; set; }
+        public int Stain2 { get; set; }
         public bool Crest { get; set; }
         public bool Apply { get; set; } = true;
         public bool ApplyStain { get; set; }
@@ -201,6 +203,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
 
         public long ItemId { get; set; }
         public int Stain { get; set; }
+        public int Stain2 { get; set; }
         public bool Crest { get; set; }
         public bool Apply { get; set; } = true;
         public bool ApplyStain { get; set; }
@@ -241,6 +244,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
 
         public long ItemId { get; set; }
         public int Stain { get; set; }
+        public int Stain2 { get; set; }
         public bool Crest { get; set; }
         public bool Apply { get; set; } = true;
         public bool ApplyStain { get; set; }
@@ -263,6 +267,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
 
         public long ItemId { get; set; }
         public int Stain { get; set; }
+        public int Stain2 { get; set; }
         public bool Crest { get; set; }
         public bool Apply { get; set; } = true;
         public bool ApplyStain { get; set; }
@@ -321,6 +326,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
 
         public long ItemId { get; set; }
         public int Stain { get; set; }
+        public int Stain2 { get; set; }
         public bool Crest { get; set; }
         public bool Apply { get; set; } = true;
         public bool ApplyStain { get; set; }
@@ -334,6 +340,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
 
         public long ItemId { get; set; }
         public int Stain { get; set; }
+        public int Stain2 { get; set; }
         public bool Crest { get; set; }
         public bool Apply { get; set; } = true;
         public bool ApplyStain { get; set; }
@@ -365,6 +372,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
 
         public ulong ItemId { get; set; }
         public int Stain { get; set; }
+        public int Stain2 { get; set; }
         public bool Crest { get; set; }
         public bool Apply { get; set; } = true;
         public bool ApplyStain { get; set; }
@@ -396,6 +404,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
 
         public long ItemId { get; set; }
         public int Stain { get; set; }
+        public int Stain2 { get; set; }
         public bool Crest { get; set; }
         public bool Apply { get; set; } = true;
         public bool ApplyStain { get; set; }
@@ -418,6 +427,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
 
         public long ItemId { get; set; }
         public int Stain { get; set; }
+        public int Stain2 { get; set; }
         public bool Crest { get; set; }
         public bool Apply { get; set; } = true;
         public bool ApplyStain { get; set; }
@@ -440,6 +450,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
 
         public long ItemId { get; set; }
         public int Stain { get; set; }
+        public int Stain2 { get; set; }
         public bool Crest { get; set; }
         public bool Apply { get; set; } = true;
         public bool ApplyStain { get; set; }
@@ -545,6 +556,7 @@ namespace PenumbraAndGlamourerHelpers.IPC.ThirdParty.Glamourer
 
         public long ItemId { get; set; }
         public int Stain { get; set; }
+        public int Stain2 { get; set; }
         public bool Crest { get; set; }
         public bool Apply { get { return true; } set { var thing = value; } }
         public bool ApplyStain { get; set; }
