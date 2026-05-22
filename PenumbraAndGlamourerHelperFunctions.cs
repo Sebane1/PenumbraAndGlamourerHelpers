@@ -384,7 +384,12 @@ namespace PenumbraAndGlamourerHelpers
                         activeMods.Add((mod.Value, mod.Key, settings.Item2.Value.Item2, settings.Item2.Value.Item3));
                     }
                 }
-                activeMods.Sort((a, b) => b.Priority.CompareTo(a.Priority));
+                activeMods.Sort((a, b) => 
+                {
+                    int result = b.Priority.CompareTo(a.Priority);
+                    if (result == 0) result = a.Name.CompareTo(b.Name);
+                    return result;
+                });
                 plugin?.PluginLog?.Information($"[Drag And Drop Debug] Active mods (non-self): {activeMods.Count}");
 
                 foreach (var mod in activeMods)
@@ -464,7 +469,12 @@ namespace PenumbraAndGlamourerHelpers
                         activeMods.Add((mod.Value, mod.Key, settings.Item2.Value.Item2, settings.Item2.Value.Item3));
                     }
                 }
-                activeMods.Sort((a, b) => b.Priority.CompareTo(a.Priority));
+                activeMods.Sort((a, b) => 
+                {
+                    int result = b.Priority.CompareTo(a.Priority);
+                    if (result == 0) result = a.Name.CompareTo(b.Name);
+                    return result;
+                });
 
                 // Detect if character is redirected to another race (e.g. Hroth to Midlander)
                 int mainRace = RaceInfo.SubRaceToMainRace(race);
