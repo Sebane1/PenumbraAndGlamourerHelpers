@@ -437,6 +437,7 @@ namespace PenumbraAndGlamourerHelpers
 
         public static void PopulateOmniOverrides(Guid collectionId, int gender, int race, DragAndDropTexturing.Plugin plugin)
         {
+            var collectionIdString = collectionId.ToString();
             // Clear prior static values to prevent stale reads
             FFXIVLooseTextureCompiler.Export.BackupTexturePaths.BiboOverride = null;
             FFXIVLooseTextureCompiler.Export.BackupTexturePaths.Gen3Override = null;
@@ -632,7 +633,11 @@ namespace PenumbraAndGlamourerHelpers
 
                                                 if (File.Exists(diffPath) || File.Exists(normPath))
                                                 {
-                                                    AdvancedOverlayParser.ActiveOverlays.Add(new ResolvedAdvancedOverlay
+                                                    if (!AdvancedOverlayParser.ActiveOverlays.ContainsKey(collectionIdString))
+                                                    {
+                                                        AdvancedOverlayParser.ActiveOverlays[collectionIdString] = new List<ResolvedAdvancedOverlay>();
+                                                    }
+                                                    AdvancedOverlayParser.ActiveOverlays[collectionIdString].Add(new ResolvedAdvancedOverlay
                                                     {
                                                         ModName = mod.Name,
                                                         TargetBodyPart = targetPart,
