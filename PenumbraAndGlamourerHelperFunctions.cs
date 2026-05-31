@@ -634,6 +634,7 @@ namespace PenumbraAndGlamourerHelpers
                                                 {
                                                     AdvancedOverlayParser.ActiveOverlays.Add(new ResolvedAdvancedOverlay
                                                     {
+                                                        ModName = mod.Name,
                                                         TargetBodyPart = targetPart,
                                                         UVType = uvType,
                                                         DiffusePath = File.Exists(diffPath) ? diffPath : null,
