@@ -959,31 +959,118 @@ namespace PenumbraAndGlamourerHelpers
             Dictionary<string, string> files = new Dictionary<string, string>();
             string modPath = Path.Combine(modDirectory, modDir);
 
-            // Default mod files
-            string defaultJson = Path.Combine(modPath, "default_mod.json");
-            if (File.Exists(defaultJson))
+            // Check meta.json first
+            bool handledByMeta = false;
+            string metaJson = Path.Combine(modPath, "meta.json");
+            if (File.Exists(metaJson))
             {
                 try
                 {
-                    string rawJson = File.ReadAllText(defaultJson);
-
-                    // If this mod contains any non-texture file types, skip it entirely
-                    if (rawJson.Contains(".scd") || rawJson.Contains(".pap") || rawJson.Contains(".vfx") || rawJson.Contains(".avfx") || rawJson.Contains(".tmb") || rawJson.Contains(".sklb") || rawJson.Contains(".shpk"))
-                        return files;
-
-                    var modData = JsonConvert.DeserializeObject<PenumbraModData>(rawJson);
-                    if (modData?.Files != null)
+                    string rawJson = File.ReadAllText(metaJson);
+                    if (rawJson.Contains("\"DefaultData\"") || rawJson.Contains("\"Groups\""))
                     {
-                        foreach (var kvp in modData.Files)
+                        handledByMeta = true;
+                        if (rawJson.Contains(".scd") || rawJson.Contains(".pap") || rawJson.Contains(".vfx") || rawJson.Contains(".avfx") || rawJson.Contains(".tmb") || rawJson.Contains(".sklb") || rawJson.Contains(".shpk"))
+                            return files;
+
+                        var meta = JsonConvert.DeserializeObject<PenumbraModMetaV4>(rawJson);
+                        if (meta?.DefaultData?.Files != null)
                         {
-                            string normalizedKey = kvp.Key.ToLowerInvariant().Replace("\\", "/");
-                            if (IsRelevantGamePath(normalizedKey))
-                                files[normalizedKey] = kvp.Value;
+                            foreach (var kvp in meta.DefaultData.Files)
+                            {
+                                string normalizedKey = kvp.Key.ToLowerInvariant().Replace("\\", "/");
+                                if (IsRelevantGamePath(normalizedKey))
+                                    files[normalizedKey] = kvp.Value;
+                            }
+                        }
+
+                        if (meta?.Groups != null)
+                        {
+                            foreach (var groupData in meta.Groups)
+                            {
+                                var activeOptionsPair = settings.FirstOrDefault(s => s.Key.Equals(groupData.Name, StringComparison.OrdinalIgnoreCase));
+                                var activeOptions = activeOptionsPair.Value;
+                                if (activeOptions == null)
+                                {
+                                    activeOptions = new List<string>();
+                                    if (groupData.Type != null && groupData.Type.Equals("Multi", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        for (int i = 0; i < groupData.Options.Count; i++)
+                                        {
+                                            if ((groupData.DefaultSettings & (1L << i)) != 0)
+                                            {
+                                                activeOptions.Add(i.ToString());
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        activeOptions.Add(groupData.DefaultSettings.ToString());
+                                    }
+                                }
+
+                                foreach (var option in groupData.Options)
+                                {
+                                    bool isSelected = activeOptions.Any(o => 
+                                    {
+                                        string trimmedO = o.Trim();
+                                        string trimmedName = option.Name.Trim();
+                                        if (trimmedO.Equals(trimmedName, StringComparison.OrdinalIgnoreCase))
+                                            return true;
+
+                                        if (int.TryParse(trimmedO, out int idx))
+                                        {
+                                            int optionIdx = groupData.Options.IndexOf(option);
+                                            if (optionIdx == idx)
+                                                return true;
+                                        }
+                                        return false;
+                                    });
+
+                                    if (isSelected && option.Files != null)
+                                    {
+                                        foreach (var kvp in option.Files)
+                                        {
+                                            string normalizedKey = kvp.Key.ToLowerInvariant().Replace("\\", "/");
+                                            if (IsRelevantGamePath(normalizedKey))
+                                                files[normalizedKey] = kvp.Value;
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
                 catch { }
             }
+
+            if (!handledByMeta)
+            {
+                // Default mod files
+                string defaultJson = Path.Combine(modPath, "default_mod.json");
+                if (File.Exists(defaultJson))
+                {
+                    try
+                    {
+                        string rawJson = File.ReadAllText(defaultJson);
+
+                        // If this mod contains any non-texture file types, skip it entirely
+                        if (rawJson.Contains(".scd") || rawJson.Contains(".pap") || rawJson.Contains(".vfx") || rawJson.Contains(".avfx") || rawJson.Contains(".tmb") || rawJson.Contains(".sklb") || rawJson.Contains(".shpk"))
+                            return files;
+
+                        var modData = JsonConvert.DeserializeObject<PenumbraModData>(rawJson);
+                        if (modData?.Files != null)
+                        {
+                            foreach (var kvp in modData.Files)
+                            {
+                                string normalizedKey = kvp.Key.ToLowerInvariant().Replace("\\", "/");
+                                if (IsRelevantGamePath(normalizedKey))
+                                    files[normalizedKey] = kvp.Value;
+                            }
+                        }
+                    }
+                    catch { }
+                }
 
             // Group files based on settings
             if (Directory.Exists(modPath))
@@ -1049,11 +1136,16 @@ namespace PenumbraAndGlamourerHelpers
                     catch { }
                 }
             }
+            }
 
             return files;
         }
 
         private class PenumbraModData { public Dictionary<string, string> Files { get; set; } }
+        private class PenumbraModMetaV4 {
+            public PenumbraModData DefaultData { get; set; }
+            public List<PenumbraGroupData> Groups { get; set; }
+        }
         private class PenumbraGroupData
         {
             public string Name { get; set; }
@@ -1111,7 +1203,71 @@ namespace PenumbraAndGlamourerHelpers
                         continue; // skip JSON checks if direct file is found
                     }
 
-                    // Check default_mod.json
+                    // Check meta.json
+                    bool handledByMeta = false;
+                    string metaJson = Path.Combine(modPath, "meta.json");
+                    if (File.Exists(metaJson))
+                    {
+                        try
+                        {
+                            string rawJson = File.ReadAllText(metaJson);
+                            if (rawJson.Contains("\"DefaultData\"") || rawJson.Contains("\"Groups\""))
+                            {
+                                handledByMeta = true;
+                                var meta = JsonConvert.DeserializeObject<PenumbraModMetaV4>(rawJson);
+                                if (meta?.DefaultData?.Files != null)
+                                {
+                                    foreach (var kvp in meta.DefaultData.Files)
+                                    {
+                                        if (kvp.Key.ToLowerInvariant().Replace("\\", "/") == targetGamePath)
+                                        {
+                                            string mappedPath = Path.Combine(modPath, kvp.Value.Replace("/", "\\"));
+                                            if (File.Exists(mappedPath))
+                                            {
+                                                if (matchesKeyword) priorityResults.Add(($"{mod.Value} (Default)", mappedPath));
+                                                else otherResults.Add(($"{mod.Value} (Default)", mappedPath));
+                                                foundInThisMod = true;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (meta?.Groups != null)
+                                {
+                                    foreach (var groupData in meta.Groups)
+                                    {
+                                        if (groupData?.Options != null)
+                                        {
+                                            foreach (var option in groupData.Options)
+                                            {
+                                                if (option.Files != null)
+                                                {
+                                                    foreach (var kvp in option.Files)
+                                                    {
+                                                        if (kvp.Key.ToLowerInvariant().Replace("\\", "/") == targetGamePath)
+                                                        {
+                                                            string mappedPath = Path.Combine(modPath, kvp.Value.Replace("/", "\\"));
+                                                            if (File.Exists(mappedPath))
+                                                            {
+                                                                if (matchesKeyword) priorityResults.Add(($"{mod.Value} ({groupData.Name}: {option.Name})", mappedPath));
+                                                                else otherResults.Add(($"{mod.Value} ({groupData.Name}: {option.Name})", mappedPath));
+                                                                foundInThisMod = true;
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        catch { }
+                    }
+
+                    if (!handledByMeta)
+                    {
+                        // Check default_mod.json
                     string defaultJson = Path.Combine(modPath, "default_mod.json");
                     if (File.Exists(defaultJson))
                     {
@@ -1181,6 +1337,7 @@ namespace PenumbraAndGlamourerHelpers
                         }
                     }
                 }
+            }
             }
             catch { }
             priorityResults.AddRange(otherResults);
