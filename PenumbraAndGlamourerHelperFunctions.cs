@@ -435,6 +435,265 @@ namespace PenumbraAndGlamourerHelpers
             }
         }
 
+        private static void CollectAdvancedOverlaysFromMod(string modRoot, string modName,
+            Dictionary<string, List<string>> modSettings, string collectionIdString, DragAndDropTexturing.Plugin plugin)
+        {
+            string metadataPath = AdvancedOverlayParser.FindMetadataJsonPath(modRoot);
+            if (metadataPath == null)
+                return;
+
+            plugin?.PluginLog?.Information($"[Drag And Drop Debug] Found overlay metadata at: {metadataPath}");
+            var advancedMod = AdvancedOverlayParser.Parse(metadataPath);
+            if (advancedMod == null)
+                return;
+
+            string sidecarRoot = Path.GetDirectoryName(metadataPath);
+            var coverageMaskPaths = ResolveProteusCoverageMaskPaths(modRoot, sidecarRoot, modSettings);
+
+            if (advancedMod.Overlays != null)
+            {
+                AddResolvedOverlays(advancedMod.Overlays, sidecarRoot, modName, collectionIdString, plugin,
+                    "(unconditional)", advancedMod.ColorTableRows, coverageMaskPaths);
+            }
+
+            if (advancedMod.OptionGroups == null)
+                return;
+
+            foreach (var group in advancedMod.OptionGroups)
+            {
+                if (group.PenumbraGroupName != null
+                    && group.PenumbraGroupName.Equals("Masks", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                var activeOptionsPair = modSettings.FirstOrDefault(s =>
+                    s.Key.Equals(group.PenumbraGroupName, StringComparison.OrdinalIgnoreCase));
+                var activeOptions = activeOptionsPair.Value;
+
+                if (activeOptions == null)
+                    activeOptions = BuildDefaultPenumbraGroupSelection(modRoot, group.PenumbraGroupName, group.Options?.Count ?? 0);
+
+                plugin?.PluginLog?.Information(
+                    $"[Drag And Drop Debug] Group: '{group.PenumbraGroupName}'. Active options: {activeOptions?.Count ?? 0}");
+
+                if (activeOptions == null || group.Options == null)
+                    continue;
+
+                for (int optionIndex = 0; optionIndex < group.Options.Count; optionIndex++)
+                {
+                    var option = group.Options[optionIndex];
+                    bool isSelected = AdvancedOverlayParser.IsOptionSelected(option.Name, optionIndex, activeOptions);
+                    plugin?.PluginLog?.Information(
+                        $"[Drag And Drop Debug] - Option '{option.Name}': selected={isSelected}");
+
+                    if (isSelected && option.Overlays != null)
+                    {
+                        var colorRows = option.ColorTableRows ?? advancedMod.ColorTableRows;
+                        AddResolvedOverlays(option.Overlays, sidecarRoot, modName, collectionIdString, plugin,
+                            option.Name, colorRows, coverageMaskPaths);
+                    }
+                }
+            }
+        }
+
+        private static List<string> BuildDefaultPenumbraGroupSelection(string modRoot, string groupName, int optionCount)
+        {
+            long defaultSettings = 0;
+            string groupType = "Single";
+            int resolvedOptionCount = optionCount;
+
+            if (TryGetPenumbraGroupDefaults(modRoot, groupName, out var metaDefaults, out var metaType, out var metaOptionCount))
+            {
+                defaultSettings = metaDefaults;
+                groupType = metaType ?? groupType;
+                if (metaOptionCount > 0)
+                    resolvedOptionCount = metaOptionCount;
+            }
+            else
+            {
+                try
+                {
+                    if (Directory.Exists(modRoot))
+                    {
+                        foreach (var groupFile in Directory.GetFiles(modRoot, "group_*.json"))
+                        {
+                            var groupData = JsonConvert.DeserializeObject<PenumbraGroupData>(File.ReadAllText(groupFile));
+                            if (groupData != null && groupData.Name.Equals(groupName, StringComparison.OrdinalIgnoreCase))
+                            {
+                                defaultSettings = groupData.DefaultSettings;
+                                groupType = groupData.Type ?? groupType;
+                                resolvedOptionCount = groupData.Options?.Count ?? resolvedOptionCount;
+                                break;
+                            }
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            var activeOptions = new List<string>();
+            if (groupType.Equals("Multi", StringComparison.OrdinalIgnoreCase))
+            {
+                for (int i = 0; i < resolvedOptionCount; i++)
+                {
+                    if ((defaultSettings & (1L << i)) != 0)
+                        activeOptions.Add(i.ToString());
+                }
+            }
+            else
+            {
+                activeOptions.Add(defaultSettings.ToString());
+            }
+
+            return activeOptions;
+        }
+
+        private static bool TryGetPenumbraGroupDefaults(string modRoot, string groupName,
+            out long defaultSettings, out string groupType, out int optionCount)
+        {
+            defaultSettings = 0;
+            groupType = "Single";
+            optionCount = 0;
+
+            string metaJsonPath = Path.Combine(modRoot, "meta.json");
+            if (!File.Exists(metaJsonPath))
+                return false;
+
+            try
+            {
+                string rawJson = File.ReadAllText(metaJsonPath);
+                if (!rawJson.Contains("\"Groups\""))
+                    return false;
+
+                var meta = JsonConvert.DeserializeObject<PenumbraModMetaV4>(rawJson);
+                var group = meta?.Groups?.FirstOrDefault(g =>
+                    g.Name != null && g.Name.Equals(groupName, StringComparison.OrdinalIgnoreCase));
+                if (group == null)
+                    return false;
+
+                defaultSettings = group.DefaultSettings;
+                groupType = group.Type ?? "Single";
+                optionCount = group.Options?.Count ?? 0;
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static List<string> ResolveProteusCoverageMaskPaths(string modRoot, string sidecarRoot,
+            Dictionary<string, List<string>> modSettings)
+        {
+            const string maskGroupName = "Masks";
+            var result = new List<string>();
+            var activeOptionsPair = modSettings.FirstOrDefault(s =>
+                s.Key.Equals(maskGroupName, StringComparison.OrdinalIgnoreCase));
+            var activeOptions = activeOptionsPair.Value;
+            if (activeOptions == null)
+                activeOptions = BuildDefaultPenumbraGroupSelection(modRoot, maskGroupName, 0);
+
+            if (activeOptions == null || activeOptions.Count == 0)
+                return result;
+
+            try
+            {
+                string masksDir = Path.Combine(sidecarRoot, "Masks");
+                if (!Directory.Exists(masksDir))
+                    return result;
+
+                var groupOptions = GetPenumbraGroupOptionNames(modRoot, maskGroupName);
+                foreach (var active in activeOptions)
+                {
+                    string trimmed = active.Trim();
+                    string maskName = trimmed;
+                    if (int.TryParse(trimmed, out int idx) && idx >= 0 && idx < groupOptions.Count)
+                        maskName = groupOptions[idx];
+
+                    if (string.IsNullOrEmpty(maskName) || maskName.Equals("None", StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    string maskFile = Path.Combine(masksDir, maskName + ".png");
+                    if (File.Exists(maskFile))
+                        result.Add(maskFile);
+                }
+            }
+            catch { }
+
+            return result;
+        }
+
+        private static List<string> GetPenumbraGroupOptionNames(string modRoot, string groupName)
+        {
+            var names = new List<string>();
+            string metaJsonPath = Path.Combine(modRoot, "meta.json");
+            if (File.Exists(metaJsonPath))
+            {
+                try
+                {
+                    var meta = JsonConvert.DeserializeObject<PenumbraModMetaV4>(File.ReadAllText(metaJsonPath));
+                    var group = meta?.Groups?.FirstOrDefault(g =>
+                        g.Name != null && g.Name.Equals(groupName, StringComparison.OrdinalIgnoreCase));
+                    if (group?.Options != null)
+                    {
+                        foreach (var opt in group.Options)
+                            names.Add(opt.Name);
+                        return names;
+                    }
+                }
+                catch { }
+            }
+
+            try
+            {
+                foreach (var groupFile in Directory.GetFiles(modRoot, "group_*.json"))
+                {
+                    var groupData = JsonConvert.DeserializeObject<PenumbraGroupData>(File.ReadAllText(groupFile));
+                    if (groupData != null && groupData.Name.Equals(groupName, StringComparison.OrdinalIgnoreCase)
+                        && groupData.Options != null)
+                    {
+                        foreach (var opt in groupData.Options)
+                            names.Add(opt.Name);
+                        break;
+                    }
+                }
+            }
+            catch { }
+
+            return names;
+        }
+
+        private static void AddResolvedOverlays(IEnumerable<AdvancedOverlay> overlays, string sidecarRoot,
+            string modName, string collectionIdString, DragAndDropTexturing.Plugin plugin, string contextLabel,
+            List<AdvancedColorTableRow> colorTableRows, List<string> coverageMaskPaths)
+        {
+            foreach (var overlay in overlays)
+            {
+                var resolved = AdvancedOverlayParser.CreateResolved(modName, overlay, sidecarRoot, colorTableRows, coverageMaskPaths);
+                if (resolved == null)
+                    continue;
+
+                if (resolved.RequiresShaderPath)
+                {
+                    plugin?.PluginLog?.Information(
+                        $"[Drag And Drop Debug]   -> Skipping shader-only overlay ({contextLabel}) from '{modName}'");
+                    continue;
+                }
+
+                plugin?.PluginLog?.Information(
+                    $"[Drag And Drop Debug]   -> Overlay ({contextLabel}): diff={resolved.DiffusePath != null}, norm={resolved.NormalPath != null}, mask={resolved.MaskPath != null}, index={resolved.IndexPath != null}, colorRows={resolved.ColorTableRows?.Count ?? 0}, masks={resolved.CoverageMaskPaths?.Count ?? 0}");
+
+                if (!AdvancedOverlayParser.ActiveOverlays.ContainsKey(collectionIdString))
+                    AdvancedOverlayParser.ActiveOverlays[collectionIdString] = new List<ResolvedAdvancedOverlay>();
+
+                AdvancedOverlayParser.ActiveOverlays[collectionIdString].Add(resolved);
+            }
+        }
+
+        private static void AddResolvedOverlays(IEnumerable<AdvancedOverlay> overlays, string sidecarRoot,
+            string modName, string collectionIdString, DragAndDropTexturing.Plugin plugin, string contextLabel)
+        {
+            AddResolvedOverlays(overlays, sidecarRoot, modName, collectionIdString, plugin, contextLabel, null, null);
+        }
+
         public static void PopulateOmniOverrides(Guid collectionId, int gender, int race, DragAndDropTexturing.Plugin plugin)
         {
             var collectionIdString = collectionId.ToString();
@@ -512,148 +771,9 @@ namespace PenumbraAndGlamourerHelpers
                         BackupTexturePaths.RelalaOverride = CheckAndSetOverride(files, modDirectoryPath, mod.Dir, mod.Name, 7, gender, mainRace, BackupTexturePaths.RelalaOverride, plugin);
                     }
 
-                    // Scan for Advanced Overlays (Generic Metadata Format)
+                    // Scan for Proteus / advanced overlay sidecars
                     string modRoot = Path.Combine(modDirectoryPath, mod.Dir);
-                    string advancedOverlayJsonPath = Path.Combine(modRoot, "metadata.json");
-                    if (!File.Exists(advancedOverlayJsonPath) && Directory.Exists(modRoot))
-                    {
-                        try
-                        {
-                            foreach (var subDir in Directory.GetDirectories(modRoot))
-                            {
-                                string possiblePath = Path.Combine(subDir, "metadata.json");
-                                if (File.Exists(possiblePath))
-                                {
-                                    advancedOverlayJsonPath = possiblePath;
-                                    break;
-                                }
-                            }
-                        }
-                        catch { }
-                    }
-
-                    if (File.Exists(advancedOverlayJsonPath))
-                    {
-                        plugin?.PluginLog?.Information($"[Drag And Drop Debug] Found Advanced Overlay metadata at: {advancedOverlayJsonPath}");
-                        var advancedMod = AdvancedOverlayParser.Parse(advancedOverlayJsonPath);
-                        if (advancedMod != null && advancedMod.OptionGroups != null)
-                        {
-                            foreach (var group in advancedMod.OptionGroups)
-                            {
-                                var activeOptionsPair = mod.Settings.FirstOrDefault(s => s.Key.Equals(group.PenumbraGroupName, StringComparison.OrdinalIgnoreCase));
-                                var activeOptions = activeOptionsPair.Value;
-                                if (activeOptions == null)
-                                {
-                                    long defaultSettings = 0;
-                                    string groupType = "Single";
-                                    try
-                                    {
-                                        if (Directory.Exists(modRoot))
-                                        {
-                                            foreach (var groupFile in Directory.GetFiles(modRoot, "group_*.json"))
-                                            {
-                                                var groupData = JsonConvert.DeserializeObject<PenumbraGroupData>(File.ReadAllText(groupFile));
-                                                if (groupData != null && groupData.Name.Equals(group.PenumbraGroupName, StringComparison.OrdinalIgnoreCase))
-                                                {
-                                                    defaultSettings = groupData.DefaultSettings;
-                                                    groupType = groupData.Type;
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                    }
-                                    catch { }
-
-                                    activeOptions = new List<string>();
-                                    if (groupType != null && groupType.Equals("Multi", StringComparison.OrdinalIgnoreCase))
-                                    {
-                                        for (int i = 0; i < group.Options.Count; i++)
-                                        {
-                                            if ((defaultSettings & (1L << i)) != 0)
-                                            {
-                                                activeOptions.Add(i.ToString());
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        activeOptions.Add(defaultSettings.ToString());
-                                    }
-                                }
-
-                                plugin?.PluginLog?.Information($"[Drag And Drop Debug] Group: '{group.PenumbraGroupName}'. Active in Penumbra? {activeOptions != null}");
-                                if (activeOptions != null)
-                                {
-                                    foreach (var option in group.Options)
-                                    {
-                                        bool isSelected = activeOptions.Any(o => 
-                                        {
-                                            string trimmedO = o.Trim();
-                                            string trimmedName = option.Name.Trim();
-                                            if (trimmedO.Equals(trimmedName, StringComparison.OrdinalIgnoreCase))
-                                                return true;
-
-                                            if (int.TryParse(trimmedO, out int idx))
-                                            {
-                                                int optionIdx = group.Options.IndexOf(option);
-                                                if (optionIdx == idx)
-                                                    return true;
-                                            }
-                                            return false;
-                                        });
-
-                                        plugin?.PluginLog?.Information($"[Drag And Drop Debug] - Checking Option: '{option.Name}'. Is Selected? {isSelected}");
-                                        if (isSelected && option.Overlays != null)
-                                        {
-                                            foreach (var overlay in option.Overlays)
-                                            {
-                                                string targetPart = "body";
-                                                string uvType = "";
-                                                if (overlay.MaterialGamePath != null)
-                                                {
-                                                    foreach (var path in overlay.MaterialGamePath)
-                                                    {
-                                                        if (path.Contains("/face/")) targetPart = "face";
-                                                        else if (path.Contains("/hair/")) targetPart = "hair";
-                                                        else if (path.Contains("/tail/")) targetPart = "tail";
-
-                                                        if (path.Contains("_bibo")) uvType = "bibo";
-                                                        else if (path.Contains("_gen3") || path.Contains("_eve")) uvType = "gen3";
-                                                        else if (path.Contains("_tbse")) uvType = "tbse";
-                                                        else if (path.Contains("_gen2")) uvType = "gen2";
-                                                    }
-                                                }
-
-                                                string relativePathRoot = Path.GetDirectoryName(advancedOverlayJsonPath);
-                                                string diffPath = !string.IsNullOrEmpty(overlay.Diffuse) ? Path.Combine(relativePathRoot, overlay.Diffuse.Replace("/", "\\")) : null;
-                                                string normPath = !string.IsNullOrEmpty(overlay.Normal) ? Path.Combine(relativePathRoot, overlay.Normal.Replace("/", "\\")) : null;
-                                                string maskPath = !string.IsNullOrEmpty(overlay.Index) ? Path.Combine(relativePathRoot, overlay.Index.Replace("/", "\\")) : null;
-
-                                                plugin?.PluginLog?.Information($"[Drag And Drop Debug]   -> Overlay Paths resolved: Diff='{diffPath}' (Exists: {File.Exists(diffPath)}), Norm='{normPath}' (Exists: {File.Exists(normPath)})");
-
-                                                if (File.Exists(diffPath) || File.Exists(normPath))
-                                                {
-                                                    if (!AdvancedOverlayParser.ActiveOverlays.ContainsKey(collectionIdString))
-                                                    {
-                                                        AdvancedOverlayParser.ActiveOverlays[collectionIdString] = new List<ResolvedAdvancedOverlay>();
-                                                    }
-                                                    AdvancedOverlayParser.ActiveOverlays[collectionIdString].Add(new ResolvedAdvancedOverlay
-                                                    {
-                                                        ModName = mod.Name,
-                                                        TargetBodyPart = targetPart,
-                                                        UVType = uvType,
-                                                        DiffusePath = File.Exists(diffPath) ? diffPath : null,
-                                                        NormalPath = File.Exists(normPath) ? normPath : null,
-                                                        MaskPath = File.Exists(maskPath) ? maskPath : null
-                                                    });
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    CollectAdvancedOverlaysFromMod(modRoot, mod.Name, mod.Settings, collectionIdString, plugin);
 
                     if (BackupTexturePaths.OverrideMode)
                     {
@@ -1181,7 +1301,7 @@ namespace PenumbraAndGlamourerHelpers
                     string modPath = Path.Combine(modDir, mod.Key);
                     bool foundInThisMod = false;
 
-                    // Quick-skip mods that contain audio/animation/VFX files — not our domain
+                    // Quick-skip mods that contain audio/animation/VFX files, not our domain
                     string quickCheckJson = Path.Combine(modPath, "default_mod.json");
                     if (File.Exists(quickCheckJson))
                     {
