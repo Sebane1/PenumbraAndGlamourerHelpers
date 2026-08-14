@@ -298,7 +298,7 @@ namespace PenumbraAndGlamourerHelpers
                         string lowerKey = key.ToLowerInvariant();
                         if (lowerKey.StartsWith("chara/bibo_")) biboCount++;
                         if (lowerKey.Contains("tfgen3")) gen3Count++;
-                        if (lowerKey.Contains("_b_d") && lowerKey.Contains("obj/body")) tbseCount++;
+                        if ((lowerKey.Contains("_b_d") || lowerKey.Contains("_b_n") || lowerKey.Contains("_b_s") || lowerKey.Contains("_b_m")) && lowerKey.Contains("obj/body")) tbseCount++;
                     }
 
                     if (gender == 1) tbseCount = 0; // TBSE is not for females
@@ -318,7 +318,7 @@ namespace PenumbraAndGlamourerHelpers
                         // Multiple body types â?" check name first, then use whichever has more paths
                         detectedModName = mod.Name;
                         plugin?.PluginLog?.Information($"[Drag And Drop Debug] Multiple body types in '{mod.Name}' (bibo={biboCount}, gen3={gen3Count}, tbse={tbseCount}). Checking name...");
-                        if (gender != 0) { if (lnm.Contains("bibo") || lnm.Contains("yab") || lnm.Contains("b+") || ldr.Contains("bibo")) return 1; if (lnm.Contains("gen3") || lnm.Contains("tight & firm") || System.Text.RegularExpressions.Regex.IsMatch(lnm, @"(^|[^a-z])eve([^a-z]|$)") || lnm.Contains("exqb") || lnm.Contains("pythia") || lnm.Contains("gaia") || ldr.Contains("gen3") || ldr.Contains("exqb") || ldr.Contains("pythia") || ldr.Contains("gaia")) return 2; } if (gender != 1) { if (lnm.Contains("tbse") || ldr.Contains("tbse")) return 3; }
+                        if (gender != 0) { if (lnm.Contains("bibo") || lnm.Contains("yab") || lnm.Contains("b+") || ldr.Contains("bibo")) return 1; if (lnm.Contains("gen3") || lnm.Contains("tight & firm") || System.Text.RegularExpressions.Regex.IsMatch(lnm, @"(^|[^a-z])eve([^a-z]|$)") || lnm.Contains("exqb") || lnm.Contains("pythia") || lnm.Contains("gaia") || ldr.Contains("gen3") || ldr.Contains("exqb") || ldr.Contains("pythia") || ldr.Contains("gaia")) return 2; } if (gender != 1) { if (lnm.Contains("tbse") || ldr.Contains("tbse") || lnm.Contains("hrbody") || ldr.Contains("hrbody") || lnm.Contains("swole") || ldr.Contains("swole") || lnm.Contains("hunk") || ldr.Contains("hunk") || lnm.Contains("the body") || ldr.Contains("the body")) return 3; }
                         // Name didn't help â?" the type with the most paths is the primary one
                         int max = Math.Max(biboCount, Math.Max(gen3Count, tbseCount));
                         int dominant = gen3Count == max ? 2 : biboCount == max ? 1 : 3;
@@ -333,7 +333,7 @@ namespace PenumbraAndGlamourerHelpers
                             if (lnm.Contains("gen3") || lnm.Contains("tight & firm") || System.Text.RegularExpressions.Regex.IsMatch(lnm, @"(^|[^a-z])eve([^a-z]|$)") || lnm.Contains("exqb") || lnm.Contains("pythia") || lnm.Contains("gaia") || ldr.Contains("gen3") || ldr.Contains("exqb") || ldr.Contains("pythia") || ldr.Contains("gaia")) { detectedModName = mod.Name; plugin?.PluginLog?.Information($"[Drag And Drop Debug] Body detected via name: '{mod.Name}' -> Gen3"); return 2; }
                         }
                         if (gender != 1) {
-                            if (lnm.Contains("tbse") || ldr.Contains("tbse")) { detectedModName = mod.Name; plugin?.PluginLog?.Information($"[Drag And Drop Debug] Body detected via name: '{mod.Name}' -> TBSE"); return 3; }
+                            if (lnm.Contains("tbse") || ldr.Contains("tbse") || lnm.Contains("hrbody") || ldr.Contains("hrbody") || lnm.Contains("swole") || ldr.Contains("swole") || lnm.Contains("hunk") || ldr.Contains("hunk") || lnm.Contains("the body") || ldr.Contains("the body")) { detectedModName = mod.Name; plugin?.PluginLog?.Information($"[Drag And Drop Debug] Body detected via name: '{mod.Name}' -> TBSE"); return 3; }
                         }
                     }
                 }
