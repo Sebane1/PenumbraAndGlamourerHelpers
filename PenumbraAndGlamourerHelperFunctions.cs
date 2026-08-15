@@ -868,7 +868,7 @@ namespace PenumbraAndGlamourerHelpers
                     string outBase = "";
                     if (!string.IsNullOrEmpty(BackupTexturePaths.Gen3Override.Base) && File.Exists(BackupTexturePaths.Gen3Override.Base))
                     {
-                        var baseHash = TextureProcessor.CreateHashLocal(BackupTexturePaths.BiboOverride.Base);
+                        var baseHash = TextureProcessor.CreateHashLocal(BackupTexturePaths.Gen3Override.Base);
                         outBase = Path.Combine(crossConvertDir, BackupTexturePaths.Gen3Override.ModName + $" {baseHash} " + Path.GetFileName(BackupTexturePaths.Gen3Override.Base).Replace(".tex", ".png"));
                         if (!File.Exists(outBase))
                         {
@@ -879,7 +879,7 @@ namespace PenumbraAndGlamourerHelpers
                     string outNorm = "";
                     if (!string.IsNullOrEmpty(BackupTexturePaths.Gen3Override.Normal) && File.Exists(BackupTexturePaths.Gen3Override.Normal))
                     {
-                        var normHash = TextureProcessor.CreateHashLocal(BackupTexturePaths.BiboOverride.Base);
+                        var normHash = TextureProcessor.CreateHashLocal(BackupTexturePaths.Gen3Override.Normal);
                         outNorm = Path.Combine(crossConvertDir, BackupTexturePaths.Gen3Override.ModName + $" {normHash} " + Path.GetFileName(BackupTexturePaths.Gen3Override.Normal).Replace(".tex", ".png"));
                         if (!File.Exists(outNorm))
                         {
@@ -890,7 +890,7 @@ namespace PenumbraAndGlamourerHelpers
                     string outMask = "";
                     if (!string.IsNullOrEmpty(BackupTexturePaths.Gen3Override.Mask) && File.Exists(BackupTexturePaths.Gen3Override.Mask))
                     {
-                        var maskHash = TextureProcessor.CreateHashLocal(BackupTexturePaths.BiboOverride.Base);
+                        var maskHash = TextureProcessor.CreateHashLocal(BackupTexturePaths.Gen3Override.Mask);
                         if (!File.Exists(outMask))
                         {
                             outMask = Path.Combine(crossConvertDir, BackupTexturePaths.Gen3Override.ModName + $" {maskHash} " + Path.GetFileName(BackupTexturePaths.Gen3Override.Mask).Replace(".tex", ".png"));
