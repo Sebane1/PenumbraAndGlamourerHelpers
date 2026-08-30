@@ -438,6 +438,12 @@ namespace PenumbraAndGlamourerHelpers
         private static void CollectAdvancedOverlaysFromMod(string modRoot, string modName,
             Dictionary<string, List<string>> modSettings, string collectionIdString, DragAndDropTexturing.Plugin plugin)
         {
+            if (AdvancedOverlayParser.IsProteusPluginInstalled())
+            {
+                plugin?.PluginLog?.Information("[Drag And Drop Debug] Proteus plugin is installed and loaded. Ignoring Proteus overlay mods.");
+                return;
+            }
+
             string metadataPath = AdvancedOverlayParser.FindMetadataJsonPath(modRoot);
             if (metadataPath == null)
                 return;
